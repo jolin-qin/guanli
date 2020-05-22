@@ -9,7 +9,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="游戏产品:">
-         <el-select v-model="queryParams.productId" multiple placeholder="请选择">
+         <el-select v-model="queryParams.productId" placeholder="请选择">
           <el-option v-for="item in advertList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
             :value="item.targetIdColumnInputSelect"></el-option>
          </el-select>
@@ -53,11 +53,10 @@
     <!-- 汇总表格 -->
     <el-table v-loading="loading" :data="exportNoTradeList" >
       <el-table-column label="事件名称" prop="eventName"/>
-      <el-table-column label="事件ID" prop="eventId"/>
-      <el-table-column label="触发用户数" prop="triggerUserNumber"/>
-      <el-table-column label="触发次数" prop="triggerNumber"/>
-      <el-table-column label="人均次数" prop="perCapita"/>
-      <el-table-column label="参数明细" prop="parameter"/>
+      <el-table-column label="事件ID" prop="eventCode"/>
+      <el-table-column label="触发用户数" prop="triggerPeopleCount"/>
+      <el-table-column label="触发次数" prop="triggerCount"/>
+      <el-table-column label="人均次数" prop="peopleAvgCount"/>
     </el-table>
   </div>
 </template>
@@ -68,120 +67,62 @@
   import request from '@/utils/request'
   export default {
     name: "playerEvents",
-    // components: {
-    //   LineChart
-    // },
     data() {
       return {
-        // 图表对比tab项index
-        activeIndex: 0,
         // 游戏产品数组
         advertList:[],
-        // 游戏分组数组
-        groupList:[],
-        // x时间轴
-        xData: [],
-        // y value值轴
-        yData: [],
         // 遮罩层
         loading: true,
-        // 玩家等级数据格式，返给的数据应按等级排好了序，就像按时间搜索返回的数据一样，都有顺序的
-        exportNoTradeList: [
-          {
-            eventName: '领取金币',
-            eventId: 'getGold',
-            triggerUserNumber: 20,
-            triggerNumber: 40,
-            perCapita: 2,
-            parameter: '无'
-          },
-          {
-            eventName: '浇水',
-            eventId: 'watering',
-            triggerUserNumber: 5,
-            triggerNumber: 20,
-            perCapita: 4,
-            parameter: '无'
-          },
-          {
-            eventName: '调戏',
-            eventId: 'flirt',
-            triggerUserNumber: 200,
-            triggerNumber: 1000,
-            perCapita: 5,
-            parameter: '无'
-          }
-        ],
+
+        exportNoTradeList: [],
         // 乘放筛选时间数组
         dateRange: [],
         //乘放游戏平台/分组/产品筛选条件的数组
         queryParams: {
-          platformType: undefined,
-          gameGroup: [],
-          productId: [],
+          platformType: '',
+          productId: '',
           eventName: ''
         },
-        // 弹出层标题
-        title: "",
-        // 是否显示弹出层
-        open: false,
         //用于获取游戏属于平台数据
         dictCache: qpShop.globalCache.shopCache.dictCache,
       }
     },
     created() {
-      this.getList();
-      this.advertInputSelect();
-      this.groupInputSelect();
+      this.getList()
+      this.advertInputSelect()
+      // this.groupInputSelect();
       // console.log(this.dictCache);
     },
-
     methods: {
       /** 查询角色列表 */
       getList() {
         this.loading = true;
+        console.log(JSON.stringify(this.getQueryData()))
         request({
-          url: '/reportGameQuery/querySyntheticalData',
+          url: '/eventReport/queryEventDataList',
           method: 'post',
           data: JSON.stringify(this.getQueryData())
         }).then(res => {
             console.log(res.data)
-            //this.exportNoTradeList = res.data.summaryList || []
-            // console.log(this.exportNoTradeList)
-            // 不管是刚进页面还是搜索或者重置,都需要清空xData,yData
-            // this.tabs.forEach((tab, index) => {
-            //   tab.xData = []
-            //   tab.yData = []
-            //   this.exportNoTradeList.forEach(item => {
-            //     tab.xData.push(item.levelNumber)
-            //     tab.yData.push(item[tab.key])
-            //   })
-            // })
-            // console.log(this.tabs[this.activeIndex].xData)
+            this.exportNoTradeList = res.data
             this.loading = false
           })
-      },
-      // tab项被选中时触发
-      tabHandleClick(tab, event) {
-        // 此事件默认会切换tab,因此改变的参数需要在display变为block后进行,所以用了$nextTick方法
-        this.activeIndex = Number(tab.index)
-        console.log(this.tabs[this.activeIndex].yData)
       },
       // 请求参数对象
       getQueryData(){
         return {
-          "beginTime": this.dateRange[0],
-          "endTime": this.dateRange[1],
-          "productIds": this.queryParams["productId"],
-          "groupByIds": this.queryParams["gameGroup"],
-          "platformType": this.queryParams["platformType"],
+          beginTime: this.dateRange[0],
+          endTime: this.dateRange[1],
+          productIds: '' + this.queryParams["productId"],
+          eventName: this.queryParams["eventName"],
+          platformType: this.queryParams["platformType"],
         }
       },
       /** 搜索按钮操作 */
       handleQuery() {
-        this.getList();
-        this.advertInputSelect();
-        this.groupInputSelect();
+        this.getList()
+        this.advertInputSelect()
+        // this.groupInputSelect()
       },
       /** 重置按钮操作 */
       resetQuery() {
@@ -203,7 +144,7 @@
 
       advertInputSelect(query, params) {
         var that = this;
-        if(undefined == params) {
+        if(params == undefined) {
           params = {
             platformType: '',
             groupByIds: ''
@@ -214,12 +155,7 @@
         }, JSON.stringify(params));
       },
       // 下拉数据
-      groupInputSelect(query) {
-        var that = this;
-        this.inputSelectList("t_filter", "group_id", query, function(data) {
-          that.groupList = data;
-        })
-      },
+
       changeHandler() {
         console.log(this.values)
       },

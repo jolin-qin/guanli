@@ -8,14 +8,10 @@
             :value="item.dictValue" />
         </el-select>
       </el-form-item>
-      <!-- <el-form-item label="游戏分组:">
-       <el-select v-model="queryParams.gameGroup" multiple placeholder="分组" size="small">
-         <el-option v-for="item in groupList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
-           :value="item.targetIdColumnInputSelect"></el-option>
-       </el-select> -->
+
       </el-form-item>
       <el-form-item label="游戏产品:">
-         <el-select v-model="queryParams.productId" multiple placeholder="请选择">
+         <el-select v-model="queryParams.productId" placeholder="请选择">
           <el-option v-for="item in advertList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
             :value="item.targetIdColumnInputSelect"></el-option>
          </el-select>
@@ -25,11 +21,8 @@
           v-model="dateRange"
           size="small"
           style="width: 240px"
-          value-format="yyyy-MM-dd"
-          type="daterange"
-          range-separator="-"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
+          type="date"
+          :picker-options="pickerOptions"
         ></el-date-picker>
       </el-form-item>
       <el-form-item>
@@ -79,7 +72,7 @@
       <!-- <el-table-column label="产品名称" prop="registerSevenRetain"  /> -->
       <el-table-column label="等级数" prop="levelNumber"/>
       <el-table-column label="等级类型" prop="levelTpye"/>
-      <el-table-column label="人数" prop="peopleNumber"/>
+      <el-table-column label="总人数" prop="peopleNumber"/>
       <el-table-column label="与昨日对比" prop="contrastWithYesterday"/>
       <el-table-column label="总占比" prop="totalPercentage"/>
       <el-table-column label="新注册用户" prop="newRegister"  />
@@ -93,7 +86,7 @@
   import LineChart from '../../dashboard/LineChart.vue' //引进了Echarts封装好的组件
   import request from '@/utils/request'
   export default {
-    name: "exportNoTardeReport",
+    name: "playerLevels",
     components: {
       LineChart
     },
@@ -141,18 +134,21 @@
             registerPercentage: '2.35%'
           }
         ],
-        // 乘放筛选时间数组
-        dateRange: [],
+        // 乘放筛选时间
+        dateRange: '',
         //乘放游戏平台/分组/产品筛选条件的数组
         queryParams: {
             platformType: undefined,
             gameGroup: [],
             productId: []
         },
-        // 弹出层标题
-        title: "",
-        // 是否显示弹出层
-        open: false,
+        // el-date-picker的配置
+        pickerOptions: {
+          disabledDate(time) {
+            return time.getTime() > Date.now();
+          }
+        },
+
         //用于获取游戏属于平台数据
         dictCache: qpShop.globalCache.shopCache.dictCache,
         // 日/周/月数据
@@ -162,7 +158,6 @@
         monthday: {},
         // 切换图表
         tabs: [
-          
           {
             label: '人数',
             value: 0,
@@ -204,9 +199,11 @@
       }
     },
     created() {
-      this.getList();
-      this.advertInputSelect();
-      this.groupInputSelect();
+      this._defaultPlatform() //设置默认平台
+      this._defaultTime()  //设置默认搜索时间
+      this.getList()
+      this.advertInputSelect()
+      // this.groupInputSelect()
       // console.log(this.dictCache);
     },
 
@@ -244,8 +241,8 @@
       // 请求参数对象
       getQueryData(){
         return {
-          "beginTime": this.dateRange[0],
-          "endTime": this.dateRange[1],
+          "beginTime": this.dateRange,
+          "endTime": this.dateRange,
           "productIds": this.queryParams["productId"],
           "groupByIds": this.queryParams["gameGroup"],
           "platformType": this.queryParams["platformType"],
@@ -255,7 +252,7 @@
       handleQuery() {
         this.getList();
         this.advertInputSelect();
-        this.groupInputSelect();
+        // this.groupInputSelect();
       },
       /** 重置按钮操作 */
       resetQuery() {
@@ -274,16 +271,20 @@
           // downLoadZip(encodeURI("/reportGameExport/gameExportNoTrade?filterJson=" + filterJsonStr), "exportNoTrade",true);
           downLoadZip(encodeURI("/reportGameExport/gameGeorgeOuData?filterJson=" + filterJsonStr), "exportNoTrade",true);
       },
-      // 下拉数据
-      // advertInputSelect(query) {
-      //   var that = this;
-      //   this.inputSelectList("t_filter", "product_id", query, function(data) {
-      //     that.advertList = data;
-      //   });
-      // },
+
+      // 设置默认平台
+      _defaultPlatform() {
+        this.queryParams.platformType = this.dictCache.platform_type.details[0].dictValue
+      },
+      // 设置默认时间
+      _defaultTime() {
+        let time = new Date()
+        this.dateRange = time.setTime(time.getTime() - 3600*1000*24)
+      },
+      // 获取游戏产品options
       advertInputSelect(query, params) {
         var that = this;
-        if(undefined == params) {
+        if(params == undefined) {
           params = {
             platformType: '',
             groupByIds: ''
@@ -291,15 +292,17 @@
         }
         this.inputSelectList("t_filter", "product_id", query, function(data) {
           that.advertList = data;
+          // console.log(that.queryParams.productIda instanceof Array)
+          // that.queryParams.productId.push(data[0].targetIdColumnInputSelect)
         }, JSON.stringify(params));
       },
       // 下拉数据
-      groupInputSelect(query) {
-        var that = this;
-        this.inputSelectList("t_filter", "group_id", query, function(data) {
-          that.groupList = data;
-        })
-      },
+      // groupInputSelect(query) {
+      //   var that = this;
+      //   this.inputSelectList("t_filter", "group_id", query, function(data) {
+      //     that.groupList = data;
+      //   })
+      // },
       changeHandler() {
         console.log(this.values)
       },
