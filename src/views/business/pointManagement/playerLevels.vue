@@ -48,9 +48,9 @@
           </el-select>
         </el-col>
       </el-row>
-      <el-row>
+      <!-- <el-row>
         <line-chart :x="tabs[activeIndex].xData" :y="tabs[activeIndex].yData" />
-      </el-row>
+      </el-row> -->
     </div>
     <!-- 表格统计 -->
     <el-row :gutter="10" class="mb8 qphead">
@@ -85,6 +85,7 @@
   import { downLoadZip } from '@/utils/zipdownload'
   import LineChart from '../../dashboard/LineChart.vue' //引进了Echarts封装好的组件
   import request from '@/utils/request'
+  import { standardDateFormat } from '@/api/shuxin'
   export default {
     name: "playerLevels",
     components: {
@@ -105,41 +106,12 @@
         // 遮罩层
         loading: true,
         // 玩家等级数据格式，返给的数据应按等级排好了序，就像按时间搜索返回的数据一样，都有顺序的
-        exportNoTradeList: [
-          {
-            levelNumber: '一级',
-            levelTpye: '菜鸟',
-            peopleNumber: 20,
-            contrastWithYesterday: '50%',
-            totalPercentage: '20%',
-            newRegister: 2,
-            registerPercentage: '2.35%'
-          },
-          {
-            levelNumber: '二级',
-            levelTpye: '菜鸟',
-            peopleNumber: 50,
-            contrastWithYesterday: '85%',
-            totalPercentage: '20%',
-            newRegister: 2,
-            registerPercentage: '2.35%'
-          },
-          {
-            levelNumber: '三级',
-            levelTpye: '入门玩家',
-            peopleNumber: 2,
-            contrastWithYesterday: '5%',
-            totalPercentage: '5%',
-            newRegister: 2,
-            registerPercentage: '2.35%'
-          }
-        ],
+        exportNoTradeList: [],
         // 乘放筛选时间
         dateRange: '',
         //乘放游戏平台/分组/产品筛选条件的数组
         queryParams: {
-            platformType: undefined,
-            gameGroup: [],
+            // platformType: '',
             productId: []
         },
         // el-date-picker的配置
@@ -148,118 +120,72 @@
             return time.getTime() > Date.now();
           }
         },
-
         //用于获取游戏属于平台数据
         dictCache: qpShop.globalCache.shopCache.dictCache,
         // 日/周/月数据
-        beforeYesterday: {},
-        yesterday: {},
-        weekday: {},
-        monthday: {},
+        // beforeYesterday: {},
+        // yesterday: {},
+        // weekday: {},
+        // monthday: {},
         // 切换图表
-        tabs: [
-          {
-            label: '人数',
-            value: 0,
-            xData: [],
-            yData: [],
-            key: 'peopleNumber'
-          },
-          {
-            label: '与昨日对比',
-            value: 1,
-            xData: [],
-            yData: [],
-            key: 'contrastWithYesterday'
-          },
-          {
-            label: '总占比',
-            value: 2,
-            xData: [],
-            yData: [],
-            key: 'totalPercentage'
-          },
-          {
-            label: '新注册用户',
-            value: 3,
-            xData: [],
-            yData: [],
-            key: 'newRegister'
-          },
-          {
-            label: '注册占比',
-            value: 4,
-            xData: [],
-            yData: [],
-            key: 'registerPercentage'
-          }
-        ],
+        tabs: [],
         // 图表Y轴展示项select绑定值
         values: [0]
       }
     },
     created() {
-      this._defaultPlatform() //设置默认平台
+      //this._defaultPlatform() //设置默认平台
       this._defaultTime()  //设置默认搜索时间
-      this.getList()
+
       this.advertInputSelect()
       // this.groupInputSelect()
       // console.log(this.dictCache);
     },
-
     methods: {
+      
       /** 查询角色列表 */
       getList() {
         this.loading = true;
         request({
-          url: '/reportGameQuery/querySyntheticalData',
+          url: '/business/level/matrixLevelList',
           method: 'post',
           data: JSON.stringify(this.getQueryData())
         }).then(res => {
             console.log(res.data)
-            //this.exportNoTradeList = res.data.summaryList || []
+            // this.exportNoTradeList = res.data.summaryList || []
             // console.log(this.exportNoTradeList)
             // 不管是刚进页面还是搜索或者重置,都需要清空xData,yData
-            this.tabs.forEach((tab, index) => {
-              tab.xData = []
-              tab.yData = []
-              this.exportNoTradeList.forEach(item => {
-                tab.xData.push(item.levelNumber)
-                tab.yData.push(item[tab.key])
-              })
-            })
-            console.log(this.tabs[this.activeIndex].xData)
+            // this.tabs.forEach((tab, index) => {
+            //   tab.xData = []
+            //   tab.yData = []
+            //   this.exportNoTradeList.forEach(item => {
+            //     tab.xData.push(item.levelNumber)
+            //     tab.yData.push(item[tab.key])
+            //   })
+            // })
+            // console.log(this.tabs[this.activeIndex].xData)
             this.loading = false
           })
-      },
-      // tab项被选中时触发
-      tabHandleClick(tab, event) {
-        // 此事件默认会切换tab,因此改变的参数需要在display变为block后进行,所以用了$nextTick方法
-        this.activeIndex = Number(tab.index)
-        console.log(this.tabs[this.activeIndex].yData)
       },
       // 请求参数对象
       getQueryData(){
         return {
-          "beginTime": this.dateRange,
-          "endTime": this.dateRange,
-          "productIds": this.queryParams["productId"],
-          "groupByIds": this.queryParams["gameGroup"],
-          "platformType": this.queryParams["platformType"],
+          selectDate: '' + this.dateRange,
+          productId:  '' + this.queryParams["productId"],
+          platformType: this.queryParams["platformType"],
         }
       },
       /** 搜索按钮操作 */
       handleQuery() {
         this.getList();
-        this.advertInputSelect();
+        // this.advertInputSelect();
         // this.groupInputSelect();
       },
       /** 重置按钮操作 */
       resetQuery() {
-        this.dateRange = [];
+        this.dateRange = '';
         this.queryParams = {
-          platformType: '',
-          gameGroup: [],
+          // platformType: '',
           productId: []
         };
         this.resetForm("queryForm");
@@ -279,7 +205,9 @@
       // 设置默认时间
       _defaultTime() {
         let time = new Date()
-        this.dateRange = time.setTime(time.getTime() - 3600*1000*24)
+        let timeStamp = time.setTime(time.getTime() - 3600*1000*24)
+        this.dateRange = standardDateFormat(timeStamp)
+        console.log(this.dateRange)
       },
       // 获取游戏产品options
       advertInputSelect(query, params) {
@@ -292,33 +220,16 @@
         }
         this.inputSelectList("t_filter", "product_id", query, function(data) {
           that.advertList = data;
-          // console.log(that.queryParams.productIda instanceof Array)
-          // that.queryParams.productId.push(data[0].targetIdColumnInputSelect)
+          that.queryParams.productId = data[0].targetIdColumnInputSelect
+          // 拿到默认游戏产品productId后再请求列表
+          that.getList()
         }, JSON.stringify(params));
       },
-      // 下拉数据
-      // groupInputSelect(query) {
-      //   var that = this;
-      //   this.inputSelectList("t_filter", "group_id", query, function(data) {
-      //     that.groupList = data;
-      //   })
-      // },
+
       changeHandler() {
         console.log(this.values)
       },
-      // 给日期加上两个"-"号
-      composeNewStr(str) {
-        const things = [
-          { thing: "-", sp: 4 },
-          { thing: "-", sp: 6 }
-        ]
-        const strArr = str.split("");
-        things.forEach(item => {
-          const { sp: index, thing = "" } = item;
-          strArr[index] = thing + (strArr[index] || "");
-        });
-        return strArr.join("");
-      }
+
     }
   }
 </script>

@@ -264,8 +264,8 @@ export function buildFilter(tableName, query){
     if (!hasColumnFlag){
       continue;
     }
-    
-    
+
+
     //范围字段
     if (query[key] instanceof Array){
       if (column.dataType == "DATE_TIME" || column.dataType == "DATE"){
@@ -372,4 +372,26 @@ export function inputSelectList(tableName, columnName, query, callback,params){
     request({url: url, method: 'post'}).then(res=>{
       callback(buildResultData(column, res.data));
     });
+}
+// 给日期加上两个"-"号,比如20200520变成2020-05-20
+export function composeNewStr(str) {
+  const things = [
+    { thing: "-", sp: 4 },
+    { thing: "-", sp: 6 }
+  ]
+  const strArr = str.split("");
+  things.forEach(item => {
+    const { sp: index, thing = "" } = item;
+    strArr[index] = thing + (strArr[index] || "");
+  });
+  return strArr.join("");
+}
+//时间戳转变为2020-05-20
+export function standardDateFormat(time) {
+  let result = new Date(time)
+  let Y = result.getFullYear()
+  let M = result.getMonth() + 1 < 10 ? '0' + (result.getMonth() + 1) : result.getMonth() + 1
+  let D = result.getDate() < 10 ? '0' + result.getDate() : result.getDate()
+  let srtDate = Y + '-' + M + '-' + D
+  return srtDate
 }
