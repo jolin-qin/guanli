@@ -63,7 +63,7 @@
       @pagination="getList" />
 
     <!-- 添加或修改广告对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="1200px">
+    <el-dialog :title="title" :visible.sync="open" width="1200px" :before-close="cancel">
       <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="120px">
         <el-form-item label="广告APPID" prop="appId">
           <el-input v-model="form.appId" placeholder="请输入广告APPID" />
@@ -97,11 +97,12 @@
           <el-input v-model="form.remark" placeholder="请输入备注信息" style="width:  850px;" />
         </el-form-item>
         <el-row>
+          <!-- 上传直角图片 -->
           <el-col>
-            <el-form-item label="直角" prop="img">
-              <el-upload class="avatar-uploader" ref="picUpload" action="#" :multiple="true" :file-list="form.iconRightAngleList"
-                list-type="picture-card" accept=".jpg, .png, .jpeg, .PNG" :http-request="requestUpload" :on-success="(value)=> handleAvatarSuccess(form.iconRightAngleList, value)"
-                :on-remove="(value)=> onRemove(form.iconRightAngleList, value)" :before-upload="beforeUpload">
+            <el-form-item label="直角" prop="iconRightAngleList">
+              <el-upload class="avatar-uploader" :limit="4" action="#" multiple :file-list="imageRightAngleList"
+                list-type="picture-card" accept=".jpg, .png, .jpeg" :http-request="requestUpload" :on-success="handleAvatarSuccess"
+                :on-remove="handleRemove" :before-upload="beforeUpload">
                 <div class="img-upload-button">
                   <i class="el-icon-plus avatar-uploader-icon"></i>
                 </div>
@@ -109,11 +110,12 @@
             </el-form-item>
             <span style="height: 100px;line-height: 100px;color: red;">素材图片分辨率：150 x 150 (JPG，PNG) ，大小50KB以内；</span>
           </el-col>
+          <!-- 上传圆角图片 -->
           <el-col>
-            <el-form-item label="圆角" prop="img">
-              <el-upload class="avatar-uploader" ref="picUpload" action="#" :multiple="true" :file-list="form.iconFilletList"
-                list-type="picture-card" accept=".jpg, .png, .jpeg, .PNG" :http-request="requestUpload" :on-success="(value)=> handleAvatarSuccess(form.iconFilletList, value)"
-                :on-remove="(value)=> onRemove(form.iconFilletList, value)" :before-upload="beforeUpload">
+            <el-form-item label="圆角" prop="iconFilletList">
+              <el-upload class="avatar-uploader" :limit="4" action="#" multiple :file-list="imageFilletList"
+                list-type="picture-card" accept=".jpg, .png, .jpeg" :http-request="requestUpload" :on-success="handleFilletSuccess"
+                :on-remove="handleFilletRemove" :before-upload="beforeUpload">
                 <div class="img-upload-button">
                   <i class="el-icon-plus avatar-uploader-icon"></i>
                 </div>
@@ -121,11 +123,12 @@
             </el-form-item>
             <span style="height: 100px;line-height: 100px;color: red;">素材图片分辨率：150 x 150 (JPG，PNG)，大小50KB以内；</span>
           </el-col>
+          <!-- 上传banner图片 -->
           <el-col>
-            <el-form-item label="banner" prop="img">
-              <el-upload class="avatar-uploader" ref="picUpload" action="#" :multiple="true" :file-list="form.bannerList"
-                list-type="picture-card" accept=".jpg, .png, .jpeg, .PNG" :http-request="requestUpload" :on-success="(value)=> handleAvatarSuccess(form.bannerList, value)"
-                :on-remove="(value)=> onRemove(form.bannerList, value)" :before-upload="beforeUploadBanner">
+            <el-form-item label="banner" prop="bannerList">
+              <el-upload class="avatar-uploader" :limit="4" action="#" multiple :file-list="imageBannerList"
+                list-type="picture-card" accept=".jpg, .png, .jpeg" :http-request="requestUpload" :on-success="handleBannerSuccess"
+                :on-remove="handleBannerRemove" :before-upload="beforeUploadBanner">
                 <div class="img-upload-button">
                   <i class="el-icon-plus avatar-uploader-icon"></i>
                 </div>
@@ -133,11 +136,12 @@
             </el-form-item>
             <span style="height: 100px;line-height: 100px;color: red;">素材图片分辨率：960 x 334 (JPG，PNG) ，大小150KB以内；</span>
           </el-col>
+          <!-- 上传插屏图片 -->
           <el-col>
-            <el-form-item label="插屏" prop="img">
-              <el-upload class="avatar-uploader" ref="picUpload" action="#" :multiple="true" :file-list="form.screenList"
-                list-type="picture-card" accept=".jpg, .png, .jpeg, .PNG" :http-request="requestUpload" :on-success="(value)=> handleAvatarSuccess(form.screenList, value)"
-                :on-remove="(value)=> onRemove(form.screenList, value)" :before-upload="beforeUpload">
+            <el-form-item label="插屏" prop="screenList">
+              <el-upload class="avatar-uploader" action="#" :limit="4" multiple :file-list="imageScreenList"
+                list-type="picture-card" accept=".jpg, .png, .jpeg" :http-request="requestUpload" :on-success="handleScreenSuccess"
+                :on-remove="handleScreenRemove" :before-upload="beforeUpload">
                 <div class="img-upload-button">
                   <i class="el-icon-plus avatar-uploader-icon"></i>
                 </div>
@@ -167,8 +171,6 @@
   import * as qpShop from '@/api/global-cache'
   import * as oss from '@/api/aliyunoss'
   import * as shuxinTool from '@/utils/shuxin-tool'
-
-
   export default {
     name: "Advert",
     data() {
@@ -190,6 +192,11 @@
         title: "",
         // 是否显示弹出层
         open: false,
+        // 上传图片时,:file-list只是可读的,不能写,因此声明变量做个转变
+        imageRightAngleList: [],
+        imageFilletList: [],
+        imageBannerList: [],
+        imageScreenList: [],
         // 查询参数
         queryParams: {
           pageNum: 1,
@@ -203,7 +210,12 @@
           isUpperDown: undefined,
         },
         // 表单参数
-        form: {},
+        form: {
+          iconRightAngleList: [],
+          iconFilletList: [],
+          bannerList: [],
+          screenList: []
+        },
         // 表单校验
         rules: {
           appId: [{
@@ -235,9 +247,7 @@
             required: true,
             message: "上下架不能为空",
             trigger: "change"
-          }],
-
-
+          }]
         },
         dictCache: qpShop.globalCache.shopCache.dictCache,
       };
@@ -248,30 +258,30 @@
     methods: {
       // 上传预处理
       beforeUpload(file) {
-        if (file.type.indexOf("image/") == -1) {
-          this.msgError("文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。");
-        } else {
-          const isLtSize = file.size / 1024  < 50;
-           if (!isLtSize) {
-             this.msgError('上传图片大小不能超过 50kB!');
-             return false;
-           }
+        const isLtSize = file.size / 1024  < 50
+        const isJpg = file.type == 'image/jpeg' || file.type == 'image/jpg' || file.type == 'image/png'
+        if(!isJpg){
+          this.$message.error('只能上传jpg, jpeg, png格式的图片！')
+          return false
+        }
+        if (!isLtSize) {
+          this.$message.error('上传图片大小不能超过 50KB!');
+          return false
         }
       },
       // 上传预处理
       beforeUploadBanner(file) {
-        if (file.type.indexOf("image/") == -1) {
-          this.msgError("文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。");
-        } else {
-          const isLtSize = file.size / 1024  < 150;
-          if (!isLtSize) {
-            this.msgError('上传banner图片大小不能超过 150kB!');
-            return false;
-          }
+        const isLtSize = file.size / 1024  < 150
+        const isJpg = file.type == 'image/jpeg' || file.type == 'image/jpg' || file.type == 'image/png'
+        if(!isJpg){
+          this.$message.error('只能上传jpg, jpeg, png格式的图片！')
+          return false
+        }
+        if (!isLtSize) {
+          this.$message.error('上传图片大小不能超过 150KB!');
+          return false
         }
       },
-
-
       /** 查询广告列表 */
       getList() {
         this.loading = true;
@@ -283,7 +293,11 @@
       },
       // 取消按钮
       cancel() {
-        this.open = false;
+        this.open = false
+        this.imageRightAngleList = []
+        this.imageFilletList = []
+        this.imageBannerList = []
+        this.imageScreenList = []
         this.reset();
       },
       // 表单重置
@@ -328,17 +342,30 @@
       /** 新增按钮操作 */
       handleAdd() {
         this.isSubmit=false;
+        this.imageRightAngleList = [];
+        this.imageFilletList = [];
+        this.imageBannerList = [];
+        this.imageScreenList = [];
         this.reset();
         this.open = true;
         this.title = "添加广告";
       },
       /** 修改按钮操作 */
       handleUpdate(row) {
-         this.isSubmit=false;
+        this.isSubmit=false;
+        this.imageRightAngleList = [];
+        this.imageFilletList = [];
+        this.imageBannerList = [];
+        this.imageScreenList = [];
         this.reset();
         const id = row.id || this.ids
-        getAdvert(id).then(response => {
-          this.form = response.data;
+        getAdvert(id).then(res => {
+          console.log(res)
+          this.form = res.data
+          this.imageRightAngleList = res.data.inProductList
+          this.imageFilletList = res.data.iconFilletList
+          this.imageBannerList = res.data.bannerList
+          this.imageScreenList = res.data.screenList
           this.open = true;
           this.title = "修改广告";
         });
@@ -358,19 +385,18 @@
                   this.open = false;
                   this.getList();
                 } else {
-                  this.isSubmit=false;
+                  this.isSubmit = false;
                   this.msgError(response.msg);
                 }
               });
             } else {
-
               addAdvert(this.form).then(response => {
                 if (response.code === 200) {
                   this.msgSuccess("新增成功");
                   this.open = false;
                   this.getList();
                 } else {
-                   this.isSubmit=false;
+                  this.isSubmit=false;
                   this.msgError(response.msg);
                 }
               });
@@ -393,49 +419,93 @@
           this.msgSuccess("删除成功");
         }).catch(function() {});
       },
-      /** 导出按钮操作 */
-      handleExport() {
-        const queryParams = this.queryParams;
-        this.$confirm('是否确认导出所有广告数据项?', "警告", {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning"
-        }).then(function() {
-          return exportAdvert(queryParams);
-        }).then(response => {
-          this.download(response.msg);
-        }).catch(function() {});
-      },
+
 
       // 覆盖默认的上传行为
-      async requestUpload(option) {
+      requestUpload(option) {
         oss.upload(option)
-        console.log('requestUpload option:', option)
       },
-      handleAvatarSuccess(adDetailItem, response, file, fileList) {
+      // 直角图片上传成功回调
+      handleAvatarSuccess(response, file, fileList) {
         const that = this
         if (shuxinTool.isEmpty(response)) {
           return;
         }
-        var img = response[0];
-        var index = img.indexOf('?uploadId');
-        if (index != -1) {
-          img = img.substr(0, index);
-        }
-        //上传的图片添加到 detailFileList 里，用于展示与保存
-        adDetailItem.push({
-          url: img
-        });
-        console.log('上传的图片=', adDetailItem)
+        console.log(response)
+        this.form.iconRightAngleList.push({ url: response[0]})
+        this.imageRightAngleList = fileList
+        console.log(this.form.iconRightAngleList)
       },
-      onRemove(adDetailItem, deleteImg) {
-        var imgList = adDetailItem;
-        for (var i = 0; i < imgList.length; i++) {
-          if (imgList[i].url === deleteImg.url) {
-            imgList.splice(i, 1);
-            break;
-          }
+      // 圆角图片上传成功回调
+      handleFilletSuccess(response, file, fileList) {
+        const that = this
+        if (shuxinTool.isEmpty(response)) {
+          return;
         }
+        console.log(response)
+        this.form.iconFilletList.push({ url: response[0]})
+        this.imageFilletList = fileList
+        console.log(this.form.iconFilletList)
+      },
+      // banner图片上传成功回调
+      handleBannerSuccess(response, file, fileList) {
+        const that = this
+        if (shuxinTool.isEmpty(response)) {
+          return;
+        }
+        console.log(response)
+        this.form.bannerList.push({ url: response[0]})
+        this.imageBannerList = fileList
+        console.log(this.form.bannerList)
+      },
+      // 插屏图片上传成功回调
+      handleScreenSuccess(response, file, fileList) {
+        const that = this
+        if (shuxinTool.isEmpty(response)) {
+          return;
+        }
+        console.log(response)
+        this.form.screenList.push({ url: response[0]})
+        this.imageScreenList = fileList
+        console.log(this.form.screenList)
+      },
+
+
+      // 直角图片删除回调
+      handleRemove(file, fileList) {
+        //找到点击删除项的下标index
+        let index = this.imageRightAngleList.findIndex(item => {
+          return file.url === item.url
+        })
+        this.form.iconRightAngleList.splice(index, 1)
+        this.imageRightAngleList = fileList
+      },
+      // 圆角图片删除回调
+      handleFilletRemove(file, fileList) {
+        //找到点击删除项的下标index
+        let index = this.imageFilletList.findIndex(item => {
+          return file.url === item.url
+        })
+        this.form.iconFilletList.splice(index, 1)
+        this.imageFilletList = fileList
+      },
+      // banner图片删除回调
+      handleBannerRemove(file, fileList) {
+        //找到点击删除项的下标index
+        let index = this.imageBannerList.findIndex(item => {
+          return file.url === item.url
+        })
+        this.form.bannerList.splice(index, 1)
+        this.imageBannerList = fileList
+      },
+      // 插屏图片删除回调
+      handleScreenRemove(file, fileList) {
+        //找到点击删除项的下标index
+        let index = this.imageScreenList.findIndex(item => {
+          return file.url === item.url
+        })
+        this.form.screenList.splice(index, 1)
+        this.imageScreenList = fileList
       }
     }
   };

@@ -22,21 +22,19 @@
           type="success"
           icon="el-icon-edit"
           size="mini"
-          :disabled="single"
-          @click="handleEditTable"
-          v-hasPermi="['tool:gen:edit']"
-        >修改</el-button>
+          @click="openDesignTable"
+          v-hasPermi="['tool:gen:design']"
+        >新建表</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['tool:gen:remove']"
-        >删除</el-button>
-      </el-col>
+        <el-col :span="1.5">
+              <el-button
+                type="info"
+                icon="el-icon-upload"
+                size="mini"
+                @click="openImportTable"
+                v-hasPermi="['tool:gen:import']"
+              >导入表</el-button>
+            </el-col>
     </el-row>
 
     <el-table v-loading="loading" :data="tableList" @selection-change="handleSelectionChange">
@@ -85,6 +83,13 @@
             type="text"
             size="small"
             icon="el-icon-edit"
+            @click="openCheckTable(scope.row)"
+            v-hasPermi="['tool:gen:edit']"
+          >校验</el-button>
+          <el-button
+            type="text"
+            size="small"
+            icon="el-icon-edit"
             @click="handleEditTable(scope.row)"
             v-hasPermi="['tool:gen:edit']"
           >编辑</el-button>
@@ -105,13 +110,24 @@
       :limit.sync="queryParams.pageSize"
       @pagination="getList"
     />
+
+    <import-table ref="import" @ok="handleQuery" />
+    <design-table ref="design" @ok="handleQuery" />
+    <check-table ref="checkTable" @ok="handleQuery" />
+
   </div>
 </template>
 
 <script>
 import { listSysTable, delSysTable } from "@/api/tool/table";
+import importTable from "./importTable";
+import designTable from "./designTable";
+import checkTable from "./checkTable";
+
+
 export default {
   name: "SysTable",
+  components: { importTable,designTable,checkTable },
   data() {
     return {
       // 遮罩层
@@ -152,6 +168,18 @@ export default {
     }
   },
   methods: {
+      /** 打开校验表弹窗 */
+    openCheckTable(row) {
+      this.$refs.checkTable.show(row);
+    },
+      /** 打开设计表弹窗 */
+    openDesignTable() {
+      this.$refs.design.show();
+    },
+    /** 打开导入表弹窗 */
+    openImportTable() {
+      this.$refs.import.show();
+    },
     /** 查询表集合 */
     getList() {
       this.loading = true;
@@ -175,10 +203,6 @@ export default {
         return;
       }
       downLoadZip("/tool/gen/batchGenCode?tables=" + tableNames, "ruoyi");
-    },
-    /** 打开导入表弹窗 */
-    openImportTable() {
-      this.$refs.import.show();
     },
     /** 重置按钮操作 */
     resetQuery() {
@@ -208,6 +232,7 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const tableIds = row.tableId || this.ids;
+      console.log('删除按钮操作:',tableIds);
       this.$confirm('是否确认删除表编号为"' + tableIds + '"的数据项?', "警告", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",

@@ -3,12 +3,7 @@
     <el-row>
       <el-col :span="12">
         <el-form-item label="表名称" prop="tableName">
-          <el-input placeholder="请输入仓库名称" v-model="info.tableName" />
-        </el-form-item>
-      </el-col>
-      <el-col :span="12">
-        <el-form-item label="表描述" prop="tableComment">
-          <el-input placeholder="请输入" v-model="info.tableComment" />
+          <el-input placeholder="请输入表名称" v-model="info.tableName" />
         </el-form-item>
       </el-col>
       <el-col :span="12">
@@ -16,6 +11,23 @@
           <el-input placeholder="请输入" v-model="info.tableAlias" />
         </el-form-item>
       </el-col>
+	  <el-col :span="12">
+	    <el-form-item label="表类型" prop="tableType">
+		   <el-select v-model="info.tableType" placeholder="请选择表类型">
+		      <el-option
+		        v-for="item in tableTypeList"
+		        :key="item.value"
+		        :label="item.label"
+		        :value="item.value">
+		      </el-option>
+		    </el-select>
+	    </el-form-item>
+	  </el-col>
+    <el-col :span="12">
+      <el-form-item label="表描述" prop="tableComment">
+        <el-input placeholder="请输入" v-model="info.tableComment" />
+      </el-form-item>
+    </el-col>
       <el-col :span="12">
         <el-form-item label="孩子节点字段" prop="childColumn">
           <el-input placeholder="请输入" v-model="info.childColumn" />
@@ -45,6 +57,16 @@ export default {
   },
   data() {
     return {
+		 tableTypeList: [{
+		          value: 'physical',
+		          label: '物理表'
+		        }, {
+		          value: 'virtual',
+		          label: '虚拟表'
+		        }, {
+		          value: 'view',
+		          label: '视图'
+		        }],
       rules: {
         tableName: [
           { required: true, message: "请输入表名称", trigger: "blur" }

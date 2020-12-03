@@ -46,40 +46,41 @@ export default {
     x: {
       handler: function(newValue, oldValue) {
         this.xData = newValue
-        console.log(this.xData)
       },
-      immediate: true
+      immediate: true,
+      deep: true
     },
-
     yNames: {
       handler: function(newValue, oldValue) {
         this.yNamesData = newValue
       },
-      immediate:true
+      immediate:true,
+      deep: true
     },
-    ys: function(newQuestion, oldQuestion){
-      this.ysData = newQuestion
-      console.log(newQuestion)
-      setTimeout(() => {
-        this.initChart()
-      }, 20)
+    ys: {
+      handler: function(newValue, oldValue) {
+        this.ysData = newValue
+        // console.log(this.ysData)
+        setTimeout(() => {
+          this.initChart()
+          // console.log("我被初始化了")
+        }, 20)
+      },
+      immediate:true,
+      deep: true
     },
     y: {
       handler: function(newValue, oldValue) {
         this.yData = newValue
-        console.log(this.yData)
         setTimeout(() => {
           this.initChart()
         }, 20)
       },
-      immediate:true
+      immediate:true,
+      deep: true
     }
   },
   mounted() {
-    // setTimeout(() => {
-    //   this.initChart()
-    // }, 20)
-    // console.log(this.yNames)
   },
   beforeDestroy() {
     if (!this.chart) {
@@ -100,7 +101,7 @@ export default {
         },
         grid: {
           left: 10,
-          right: 10,
+          right: 30,
           bottom: 20,
           top: 30,
           containLabel: true
@@ -135,43 +136,20 @@ export default {
               }
             }
           },
-          smooth: true,
           type: 'line',
+          smooth: true,
           data: this.yData,
           animationDuration: 2800,
           animationEasing: 'cubicInOut'
         }]
       }
-      // 当一个图标需要表示多种折线的时候定义图例组件的
-      // this.yNamesData.length != 0
+      // 当一个图表需要表示多种折线的时候定义图例组件的
       if (!shuxinTool.isEmpty(this.yNamesData)){
         option.legend.data = this.yNamesData;
-        // console.log(this.yNamesData)
+        // console.log(option.legend.data)
       }
-      // !shuxinTool.isEmpty(this.ysData
       if (!shuxinTool.isEmpty(this.ysData)){
-        option.series = [];
-        // console.log("00")
-        // console.log(this.yNamesData)
-        for (var i=0; i<this.ysData.length; i++){
-          option.series.push({
-            name: this.yNamesData[i].name,
-            itemStyle: {
-              normal: {
-                color: this.yNamesData[i].textStyle.color,
-                lineStyle: {
-                  color: this.yNamesData[i].textStyle.color,
-                  width: 2
-                }
-              }
-            },
-            smooth: true,
-            type: 'line',
-            data: this.ysData[i],
-            animationDuration: 2800,
-            animationEasing: 'cubicInOut'
-          })
-        }
+        option.series = this.ysData
       }
       return option;
     },
@@ -181,8 +159,8 @@ export default {
           return false
       }
       this.chart = echarts.init(ele, 'macarons')
-      this.chart.setOption(this.initOption())
-      console.log("我初始化了")
+      this.chart.setOption(this.initOption(), true)
+      // console.log("我初始化了")
     }
   }
 }

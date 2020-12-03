@@ -4,28 +4,11 @@ import request from '@/utils/request'
 export function listTable(query) {
   return request({
     url: '/tool/gen/list',
-     method: 'post',
-     data:JSON.stringify({
-       tableName:"sys_table",
-       paging:{
-         pageSize:query.pageSize,
-         pageNumber:query.pageNum
-       },
-       search:query.name,
-       filters:{},
-       orders:[]
-     })
+     method: 'get',
+     params: query
    })
  }
 
- // 创建db表
- export function createTable(data) {
-   return request({
-     url: '/tool/gen/create',
-     method: 'post',
-     data: data
-   })
- }
 
 // 查询db数据库列表
 export function listDbTable(query) {

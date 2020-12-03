@@ -16,7 +16,7 @@ export function downLoadZip(str, filename,isExcel) {
     responseType: 'blob',
     headers: { 'Authorization': 'Bearer ' + getToken() }
   }).then(res => {
-    resolveBlob(res,true == isExcel?mimeMap.newXlsx :mimeMap.zip)
+    resolveBlob(res,true == isExcel ? mimeMap.newXlsx : mimeMap.zip)
   })
 }
 /**

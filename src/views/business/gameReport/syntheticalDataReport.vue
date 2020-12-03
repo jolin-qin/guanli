@@ -3,13 +3,13 @@
     <!-- 顶部select项 -->
     <el-form :model="queryParams" ref="queryForm" :inline="true">
       <el-form-item label="所属平台:">
-        <el-select v-model="queryParams.platformType" placeholder="所属平台">
+        <el-select @change="paramsChange" v-model="queryParams.platformType" placeholder="所属平台">
           <el-option v-for="item in dictCache.platform_type.details" :key="item.dictValue" :label="item.dictLabel"
             :value="item.dictValue" />
         </el-select>
       </el-form-item>
       <el-form-item label="游戏分组:">
-       <el-select v-model="queryParams.gameGroup" multiple placeholder="分组" size="small">
+       <el-select @change="paramsChange" v-model="queryParams.gameGroup" multiple placeholder="分组" size="small">
          <el-option v-for="item in groupList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
            :value="item.targetIdColumnInputSelect"></el-option>
        </el-select>
@@ -249,7 +249,6 @@
     </el-row>
     <!-- 汇总表格 -->
     <el-table v-loading="loading" :data="exportNoTradeList" >
-      <!-- <el-table-column label="产品名称" prop="registerSevenRetain"  /> -->
       <el-table-column label="日期" prop="dataTime" />
       <el-table-column label="注册用户" prop="registerCount"  />
       <el-table-column label="活跃用户" prop="activeCount"  />
@@ -268,50 +267,37 @@
   import { downLoadZip } from '@/utils/zipdownload'
   import LineChart from '../../dashboard/LineChart.vue' //引进了Echarts封装好的组件
   import request from '@/utils/request'
+  import { isEmpty } from "@/utils/shuxin-tool"
+  import { setDefaultTime, composeNewStr } from '@/api/shuxin'
   export default {
-    name: "exportNoTardeReport",
+    name: "syntheticalDataReport",
     components: {
       LineChart
     },
     data() {
       return {
-        // 图表对比tab项index
-        activeIndex: 0,
-        // 游戏产品数组
-        advertList:[],
-        // 游戏分组数组
-        groupList:[],
-        // x时间轴
-        xData: [],
-        // y value值轴
-        yDatas: [],
+        activeIndex: 0,// 图表对比tab项index
+        advertList:[],// 游戏产品数组
+        groupList:[],// 游戏分组数组
+        xData: [],// x时间轴
+        yDatas: [],// y value值轴
         yData: [],
-        // 素材监控
-        retainReportList: [],
-        // 遮罩层
-        loading: true,
-        // 选中数组
-        ids: [],
-        // 非单个禁用
-        single: true,
-        // 非多个禁用
-        multiple: true,
-        // 总条数
-        total: 0,
-        // 类目监控表格
-        exportNoTradeList: [],
-        // 乘放筛选时间数组
-        dateRange: [],
+        loading: true,// 遮罩层
+        ids: [],// 选中数组
+        single: true,// 非单个禁用
+        multiple: true,// 非多个禁用
+        total: 0,// 总条数
+        exportNoTradeList: [],// 类目监控表格
+        defaultPlatformType: '',
+        dateRange: [],// 乘放筛选时间数组
         //乘放游戏平台/分组/产品筛选条件的数组
         queryParams: {
-            platformType: undefined,
+            platformType: '',
             gameGroup: [],
             productId: []
         },
-        // 弹出层标题
-        title: "",
-        // 是否显示弹出层
-        open: false,
+        //title: "",// 弹出层标题
+        //open: false,// 是否显示弹出层
         //用于获取游戏属于平台数据
         dictCache: qpShop.globalCache.shopCache.dictCache,
         // 日/周/月数据
@@ -367,12 +353,10 @@
       }
     },
     created() {
-      this.getList();
-      this.advertInputSelect();
+      this.dateRange = setDefaultTime() //设置默认时间(7天)
       this.groupInputSelect();
-      // console.log(this.dictCache);
+      this._defaultPlatform() //设置默认平台，会触发paramsChange()函数
     },
-
     methods: {
       /** 查询角色列表 */
       getList() {
@@ -391,7 +375,7 @@
               tab.yData = []
               this.exportNoTradeList.forEach(item => {
                 tab.yData.push(item[tab.key])
-                tab.xData.push(this.composeNewStr(item.dataTime))
+                tab.xData.push(composeNewStr(item.dataTime))
               })
             })
             console.log(this.tabs[this.activeIndex].yData)
@@ -408,7 +392,7 @@
       tabHandleClick(tab, event) {
         // 此事件默认会切换tab,因此改变的参数需要在display变为block后进行,所以用了$nextTick方法
         this.activeIndex = Number(tab.index)
-        console.log(this.tabs[this.activeIndex].yData)
+        // console.log(this.tabs[this.activeIndex].yData)
       },
       // 请求参数对象
       getQueryData(){
@@ -417,50 +401,79 @@
             "endTime": this.dateRange[1],
             "productIds": this.queryParams["productId"],
             "groupByIds": this.queryParams["gameGroup"],
-            "platformType": this.queryParams["platformType"],
+            "platformType": this.queryParams["platformType"]
         }
       },
       /** 搜索按钮操作 */
       handleQuery() {
-        this.getList();
-        this.advertInputSelect();
-        this.groupInputSelect();
+        // 没选产品不能请求
+        if(this.queryParams.productId.length > 0) {
+          this.getList()
+        } else {
+          this.$message.error('游戏产品是必选的参数哦~');
+        }
       },
       /** 重置按钮操作 */
       resetQuery() {
-        this.dateRange = [];
-        this.queryParams = {
-          platformType: '',
-          gameGroup: [],
-          productId: []
-        };
+        this.dateRange = setDefaultTime()
+        this.queryParams.platformType = this.defaultPlatformType
+        this.queryParams.gameGroup = []
+        //此处为什么不修改productId的值，是因为设置了平台，会联动到产品
         this.resetForm("queryForm");
-        this.handleQuery();
+        this.asyncCall()
       },
-      /**  导出综合监控  */
-      exportNoTarde(){
-          var filterJsonStr = JSON.stringify(this.getQueryData());
-          // downLoadZip(encodeURI("/reportGameExport/gameExportNoTrade?filterJson=" + filterJsonStr), "exportNoTrade",true);
-          downLoadZip(encodeURI("/reportGameExport/gameGeorgeOuData?filterJson=" + filterJsonStr), "exportNoTrade",true);
+      //平台、分组change事件
+      paramsChange() {
+        return new Promise((resolve, reject) => {
+          let groupByIds = this.queryParams["gameGroup"]; //是个数组
+          let platformType = this.queryParams["platformType"];
+          let groupByIdsStr = "";
+          if(groupByIds.length > 0) {
+            for(let i = 0;i < groupByIds.length;i++) {
+              groupByIdsStr += "'" + groupByIds[i] +"',";
+            }
+            groupByIdsStr = groupByIdsStr.substring(0,groupByIdsStr.length - 1);
+          }
+          let params = {
+            platformType: isEmpty(platformType) ? '' : platformType,
+            groupByIds: groupByIdsStr
+          };
+          this.advertInputSelect(null, params, resolve);
+        })
       },
-      // 下拉数据
-      // advertInputSelect(query) {
-      //   var that = this;
-      //   this.inputSelectList("t_filter", "product_id", query, function(data) {
-      //     that.advertList = data;
-      //   });
-      // },
-      advertInputSelect(query, params) {
+      advertInputSelect(query, params, resolve) {
+        this.advertList = [] //options需要清空
+        this.queryParams.productId = [] //产品显示也需要清空
         var that = this;
-        if(undefined == params) {
+        if(params == undefined) {
           params = {
             platformType: '',
             groupByIds: ''
           }
         }
         this.inputSelectList("t_filter", "product_id", query, function(data) {
-          that.advertList = data;
+          if(data.length > 0) {
+            that.advertList = data
+            that.queryParams.productId.push(data[0].targetIdColumnInputSelect)
+          } else {
+            // that.advertList = []
+            that.queryParams.productId = []
+          }
+          resolve && resolve()
         }, JSON.stringify(params));
+      },
+      // 异步函数同步话执行
+      async asyncCall() {
+        await this.paramsChange() //等此函数执行完再执行getList()
+        this.getList()
+      },
+      // 设置默认平台函数
+      _defaultPlatform() {
+        let arr = this.dictCache.platform_type.details
+        let value = arr[0].dictValue
+        this.queryParams.platformType = value
+        this.defaultPlatformType = value
+        this.asyncCall()
       },
       // 下拉数据
       groupInputSelect(query) {
@@ -469,18 +482,11 @@
           that.groupList = data;
         })
       },
-      // 给日期加上两个"-"号
-      composeNewStr(str) {
-        const things = [
-          { thing: "-", sp: 4 },
-          { thing: "-", sp: 6 }
-        ]
-        const strArr = str.split("");
-        things.forEach(item => {
-          const { sp: index, thing = "" } = item;
-          strArr[index] = thing + (strArr[index] || "");
-        });
-        return strArr.join("");
+      /**  导出综合监控  */
+      exportNoTarde(){
+          var filterJsonStr = JSON.stringify(this.getQueryData());
+          // downLoadZip(encodeURI("/reportGameExport/gameExportNoTrade?filterJson=" + filterJsonStr), "exportNoTrade",true);
+          downLoadZip(encodeURI("/reportGameExport/gameGeorgeOuData?filterJson=" + filterJsonStr), "exportNoTrade",true);
       }
     }
   }

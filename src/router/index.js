@@ -98,6 +98,19 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/versionRecord',
+    component: Layout,
+    hidden: true,
+    children: [
+      {
+        path: 'record/:productId(\\d+)',
+        component: () => import('@/views/business/version/record'),
+        name: 'Record',
+        meta: { title: '版本记录', icon: '' }
+      }
+    ]
+  },
+  {
     path: '/gen',
     component: Layout,
     hidden: true,

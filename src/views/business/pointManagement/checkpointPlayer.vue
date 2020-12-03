@@ -3,26 +3,22 @@
     <!-- 顶部select项 -->
     <el-form :model="queryParams" ref="queryForm" :inline="true">
       <el-form-item label="所属平台:">
-        <el-select v-model="queryParams.platformType" placeholder="所属平台">
+        <el-select @change="paramsChange" v-model="queryParams.platformType" placeholder="所属平台">
           <el-option v-for="item in dictCache.platform_type.details" :key="item.dictValue" :label="item.dictLabel"
             :value="item.dictValue" />
         </el-select>
       </el-form-item>
-      <!-- <el-form-item label="游戏分组:">
-       <el-select v-model="queryParams.gameGroup" multiple placeholder="分组" size="small">
-         <el-option v-for="item in groupList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
-           :value="item.targetIdColumnInputSelect"></el-option>
-       </el-select> -->
+
       </el-form-item>
       <el-form-item label="游戏产品:">
-         <el-select v-model="queryParams.productId" multiple placeholder="请选择">
+         <el-select v-model="queryParams.productId" placeholder="请选择">
           <el-option v-for="item in advertList" :key="item.targetIdColumnInputSelect" :label="item.targetNameColumnInputSelect"
             :value="item.targetIdColumnInputSelect"></el-option>
          </el-select>
       </el-form-item>
-      <el-form-item label="查询日期:">
+      <el-form-item label="查询日期:" prop="dateRange">
         <el-date-picker
-          v-model="dateRange"
+          v-model="queryParams.dateRange"
           size="small"
           style="width: 240px"
           value-format="yyyy-MM-dd"
@@ -30,6 +26,7 @@
           range-separator="-"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
+          :picker-options="pickerOptions"
         ></el-date-picker>
       </el-form-item>
       <el-form-item>
@@ -44,20 +41,30 @@
           <h2>对比图表</h2>
         </el-col>
       </el-row>
-      <!-- Y轴展示项 -->
-      <el-row>
-        <el-col :span="1">
-          <span class="labelTitle">展示项:</span>
-        </el-col>
-        <el-col :span="6">
-          <el-select v-model="values" multiple @change="changeHandler">
-            <el-option v-for="(item, index) in tabs" :key="item.value" :value="item.value" :label="item.label"></el-option>
-          </el-select>
-        </el-col>
-      </el-row>
-      <el-row>
-        <line-chart :x="tabs[activeIndex].xData" :y="tabs[activeIndex].yData" />
-      </el-row>
+      <div class="chartDiv">
+        <div class="canvasDiv">
+          <!-- Y轴展示项 -->
+          <el-row>
+            <el-col :span="1">
+              <span class="labelTitle">展示项:</span>
+            </el-col>
+            <el-col :span="7">
+              <el-select v-model="dType" multiple @remove-tag="handleMaterialTypeRemoveTag" @change="changeHandler" style="width: 100%">
+                <el-option
+                 :disabled="compareType.includes(item.value)"
+                 v-for="(item, index) in tabs"
+                 :key="item.value"
+                 :value="item.value"
+                 :label="item.label"></el-option>
+              </el-select>
+            </el-col>
+          </el-row>
+          <el-row>
+            <line-chart ref="lineEcharts" :x="tabs[1].xData" :yNames="yNames" :ys="ys" />
+          </el-row>
+        </div>
+        <!-- <div class="mask" v-show="exportNoTradeList.length == 0">暂无数据</div> -->
+      </div>
     </div>
     <!-- 表格统计 -->
     <el-row :gutter="10" class="mb8 qphead">
@@ -75,117 +82,55 @@
       </el-col>
     </el-row>
     <!-- 汇总表格 -->
-    <el-table v-loading="loading" :data="exportNoTradeList" >
-      <!-- <el-table-column label="产品名称" prop="registerSevenRetain"  /> -->
+    <el-table v-loading="loading" :data="exportNoTradeList" stripe>
       <el-table-column label="关卡ID" prop="id"/>
       <el-table-column label="关卡名称" prop="name"/>
       <el-table-column label="平均通关时间" prop="clearanceTime"/>
       <el-table-column label="进入玩家数" prop="enterPlayNum"/>
       <el-table-column label="进入次数" prop="enterNum"/>
-      <el-table-column label="成功次数" prop="successNum"  />
-      <el-table-column label="通关率" prop="successProbability"/>
-      <el-table-column label="失败次数" prop="failureNum"  />
-      <el-table-column label="失败率" prop="failureProbability"/>
+      <el-table-column label="成功次数" prop="successNum"/>
+      <el-table-column label="通关率" prop="successProbability" :formatter="_successProbability"/>
+      <el-table-column label="失败次数" prop="failureNum"/>
+      <el-table-column label="失败率" prop="failureProbability" :formatter="_failureProbability"/>
       <el-table-column label="中止次数" prop="suspendNum"/>
-      <el-table-column label="中止率" prop="suspendProbability"/>
+      <el-table-column label="中止率" prop="suspendProbability" :formatter="_suspendProbability"/>
       <el-table-column label="关卡奖励次数" prop="rewardNum"/>
       <el-table-column label="关卡奖励玩家数" prop="rewardPlayerNum"/>
     </el-table>
   </div>
-
 </template>
-
 <script>
   import * as qpShop from '@/api/global-cache'
   import { downLoadZip } from '@/utils/zipdownload'
   import LineChart from '../../dashboard/LineChart.vue' //引进了Echarts封装好的组件
   import request from '@/utils/request'
+  import * as qpTool from '@/utils/shuxin-tool'
+  import { setDefaultTime } from '@/api/shuxin'
   export default {
-    name: "exportNoTardeReport",
+    name: "checkpointPlayer",
     components: {
       LineChart
     },
     data() {
       return {
-        // 图表对比tab项index
-        activeIndex: 1,
-        // 游戏产品数组
-        advertList:[],
-        // 游戏分组数组
-        groupList:[],
-        // x时间轴
-        xData: [],
-        // y value值轴
-        yData: [],
-        // 遮罩层
-        loading: true,
-        // 关卡IDs表格
-        exportNoTradeList: [
-          {
-            id: '101',
-            name: '101',
-            clearanceTime: '00:01:15',
-            enterPlayNum: 81,
-            enterNum: 85,
-            successNum: 2,
-            successProbability: '2.35%',
-            failureNum: 0,
-            failureProbability: '0%',
-            suspendNum: 83,
-            suspendProbability: '97.65%',
-            rewardNum: 0,
-            rewardPlayerNum: 0
-          },
-          {
-            id: '102',
-            name: '102',
-            clearanceTime: '00:00:24',
-            enterPlayNum: 49,
-            enterNum: 171,
-            successNum: 82,
-            successProbability: '47.95%',
-            failureNum: 4,
-            failureProbability: '2.34%',
-            suspendNum: 85,
-            suspendProbability: '49.71%',
-            rewardNum: 0,
-            rewardPlayerNum: 0
-          },
-          {
-            id: '103',
-            name: '103',
-            clearanceTime: '00:00:35',
-            enterPlayNum: 101,
-            enterNum: 171,
-            successNum: 82,
-            successProbability: '47.95%',
-            failureNum: 4,
-            failureProbability: '2.34%',
-            suspendNum: 85,
-            suspendProbability: '49.71%',
-            rewardNum: 0,
-            rewardPlayerNum: 0
-          }
-        ],
-        // 乘放筛选时间数组
-        dateRange: [],
+        advertList:[],// 游戏产品数组
+        xData: [],// x时间轴
+        loading: true,// 遮罩层
+        exportNoTradeList: [],// 关卡IDs表格
+        defaultPlatformType: '',// 乘放游戏平台默认值
         //乘放游戏平台/分组/产品筛选条件的数组
         queryParams: {
-            platformType: undefined,
-            gameGroup: [],
-            productId: []
+          dateRange: ['', ''],
+          platformType: '',
+          productId: ''
         },
-        // 弹出层标题
-        title: "",
-        // 是否显示弹出层
-        open: false,
-        //用于获取游戏属于平台数据
-        dictCache: qpShop.globalCache.shopCache.dictCache,
-        // 日/周/月数据
-        beforeYesterday: {},
-        yesterday: {},
-        weekday: {},
-        monthday: {},
+        // el-date-picker的配置
+        pickerOptions: {
+          disabledDate(time) {
+            return time.getTime() > Date.now();
+          }
+        },
+        dictCache: qpShop.globalCache.shopCache.dictCache,//用于获取游戏属于平台数据
         // 切换图表
         tabs: [
           {
@@ -263,125 +208,170 @@
             value: 10,
             xData: [],
             yData: [],
-            key: 'rewardPlayerNum'
+            key: 'rewardPlayerNum',
           }
         ],
         // 图表Y轴展示项select绑定值
-        values: [0]
+        colors: ['#FFDB82','#7DDDC5','#F1A9D1','red', 'green', 'purple','blue','black','pink','orange','brown'],
+        yNames: [
+          {
+            name: '进入玩家数',
+            textStyle: {
+              color: '#7DDDC5'
+            }
+          }
+        ],
+        ys: [],// 控制图表有几种折线
+        dType: [1],// 图表Y轴展示项select绑定值
+        compareType: [1] //用于点击select子项的tag时比较要移除的子项是不是默认值
       }
     },
     created() {
-      this.getList();
-      this.advertInputSelect();
-      this.groupInputSelect();
-      // console.log(this.dictCache);
+      this.queryParams.dateRange = setDefaultTime() //设置默认时间
+      this._defaultPlatform() //设置默认平台
     },
-
     methods: {
       /** 查询角色列表 */
       getList() {
         this.loading = true;
         request({
-          url: '/reportGameQuery/querySyntheticalData',
+          url: '/business/point/matrixPointList',
           method: 'post',
           data: JSON.stringify(this.getQueryData())
         }).then(res => {
-            console.log(res.data)
-            //this.exportNoTradeList = res.data.summaryList || []
-            // console.log(this.exportNoTradeList)
+            this.dType = [1] //默认只显示进入玩家数的折线
+            this.ys = [] //清空
+            let resultData = res.data.matrixPointResultList
+            if(resultData) {
+              this.exportNoTradeList = resultData
+            } else {
+              this.exportNoTradeList = []
+            }
+            console.log(this.exportNoTradeList)
             // 不管是刚进页面还是搜索或者重置,都需要清空xData,yData
             this.tabs.forEach((tab, index) => {
-              tab.xData = []
-              tab.yData = []
-              this.exportNoTradeList.forEach(item => {
-                tab.xData.push(item.id)
-                tab.yData.push(item[tab.key])
-              })
+              tab.xData = [] // 清空xData
+              tab.yData = []// 清空yData
+              if(this.exportNoTradeList.length !== 0) {
+                this.exportNoTradeList.forEach(item => {
+                  tab.xData.push(item.name)
+                  tab.yData.push(item[tab.key])
+                })
+              }
             })
-            console.log(this.tabs[this.activeIndex].xData)
+            this.ys.push(this.tabs[1].yData) //只要重新调用getList(),把select多选设置只默认查询“进入玩家数”
             this.loading = false
           })
-      },
-      // tab项被选中时触发
-      tabHandleClick(tab, event) {
-        // 此事件默认会切换tab,因此改变的参数需要在display变为block后进行,所以用了$nextTick方法
-        this.activeIndex = Number(tab.index)
-        console.log(this.tabs[this.activeIndex].yData)
       },
       // 请求参数对象
       getQueryData(){
         return {
-            "beginTime": this.dateRange[0],
-            "endTime": this.dateRange[1],
-            "productIds": this.queryParams["productId"],
-            "groupByIds": this.queryParams["gameGroup"],
-            "platformType": this.queryParams["platformType"],
+            "beginTime": this.queryParams.dateRange[0],
+            "endTime": this.queryParams.dateRange[1],
+            "productId": '' + this.queryParams["productId"],
+            "platformType": this.queryParams["platformType"]
         }
       },
       /** 搜索按钮操作 */
       handleQuery() {
-        this.getList();
-        this.advertInputSelect();
-        this.groupInputSelect();
+        // 没选产品不能请求
+        if(this.queryParams.productId) {
+          this.getList()
+        }
       },
       /** 重置按钮操作 */
       resetQuery() {
-        this.dateRange = [];
-        this.queryParams = {
-          platformType: '',
-          gameGroup: [],
-          productId: []
-        };
-        this.resetForm("queryForm");
-        this.handleQuery();
+        this.queryParams.dateRange = setDefaultTime()
+        this.queryParams.platformType = this.defaultPlatformType
+        //此处为什么不修改productId的值，是因为设置了平台，会联动到产品
+        this.resetForm("queryForm")
+        this.asyncCall()
       },
-      /**  导出综合监控  */
-      exportNoTarde(){
-          var filterJsonStr = JSON.stringify(this.getQueryData());
-          // downLoadZip(encodeURI("/reportGameExport/gameExportNoTrade?filterJson=" + filterJsonStr), "exportNoTrade",true);
-          downLoadZip(encodeURI("/reportGameExport/gameGeorgeOuData?filterJson=" + filterJsonStr), "exportNoTrade",true);
+
+      // 设置默认平台
+      _defaultPlatform() {
+        let arr = this.dictCache.platform_type.details
+        let value = arr[0].dictValue
+        this.queryParams.platformType = value
+        this.defaultPlatformType = value
+        this.asyncCall()
       },
-      // 下拉数据
-      // advertInputSelect(query) {
-      //   var that = this;
-      //   this.inputSelectList("t_filter", "product_id", query, function(data) {
-      //     that.advertList = data;
-      //   });
-      // },
-      advertInputSelect(query, params) {
+      // 异步函数同步话执行
+      async asyncCall() {
+        await this.paramsChange() //等此函数执行完再执行getList()
+        this.getList()
+      },
+      //平台change事件
+      paramsChange() {
+        return new Promise((res, rej) => {
+          let platformType = this.queryParams["platformType"];
+          let params = {
+            platformType: qpTool.isEmpty(platformType) ? '' : platformType,
+            groupByIds: ''
+          };
+          this.advertInputSelect(null, params, res);
+        })
+      },
+      // 获取游戏产品options
+      advertInputSelect(query, params, res) {
+        this.advertList = [] //options需要清空
+        this.queryParams.productId = '' //产品显示也需要清空
         var that = this;
-        if(undefined == params) {
+        if(params == undefined) {
           params = {
             platformType: '',
             groupByIds: ''
           }
         }
         this.inputSelectList("t_filter", "product_id", query, function(data) {
-          that.advertList = data;
-        }, JSON.stringify(params));
+          if(data.length > 0) {
+            that.advertList = data
+            // 默认第一个option
+            that.queryParams.productId = data[0].targetIdColumnInputSelect
+            res && res()
+          }
+        }, JSON.stringify(params))
       },
-      // 下拉数据
-      groupInputSelect(query) {
-        var that = this;
-        this.inputSelectList("t_filter", "group_id", query, function(data) {
-          that.groupList = data;
-        })
+      handleMaterialTypeRemoveTag(value) {
+        let index = this.compareType.indexOf(value)
+        // 不等于-1说明要移除的是默认的值了
+        if(index !== -1) {
+          this.dType.splice(index, 0 ,value) //把移除的值在添加回来
+        }
       },
-      changeHandler() {
-        console.log(this.values)
+      // 展示项的select选择触发函数
+      changeHandler(values) {
+        setTimeout(() => {
+          this.ys = []
+          this.yNames = []
+          this.dType = values
+          //change后不管是增了子项还是移除了子项，都把this.dType遍历一遍
+          this.dType.forEach((item) => {
+            this.ys.push(this.tabs[item].yData) //根据遍历修改this.ys数据
+            // 生成yNames
+            let obj = {}
+            obj.name = this.tabs[item].label
+            obj.textStyle = { 'color': this.colors[item] }
+            this.yNames.push(obj)
+          })
+        }, 20)
       },
-      // 给日期加上两个"-"号
-      composeNewStr(str) {
-        const things = [
-          { thing: "-", sp: 4 },
-          { thing: "-", sp: 6 }
-        ]
-        const strArr = str.split("");
-        things.forEach(item => {
-          const { sp: index, thing = "" } = item;
-          strArr[index] = thing + (strArr[index] || "");
-        });
-        return strArr.join("");
+      /**  导出关卡玩家数据  */
+      exportNoTarde(){
+          var filterJsonStr = JSON.stringify(this.getQueryData());
+          downLoadZip(encodeURI("/business/point/exportMatrixPointList?filterJson=" + filterJsonStr), "exportCheckpointPlayer",true);
+      },
+      // 表格中"通关率"转%
+      _successProbability (row, column) {
+        return (row.successProbability * 100) + '%'
+      },
+      // 表格中"失败率"转%
+      _failureProbability (row, column) {
+        return (row.failureProbability * 100) + '%'
+      },
+      // 表格中"中止率"转%
+      _suspendProbability (row, column) {
+        return (row.suspendProbability * 100) + '%'
       }
     }
   }
@@ -402,24 +392,24 @@
   }
   .data-item{
     text-align: center;
-     font-size: 14px;
-     width: auto;
-     box-sizing: border-box;
-     padding: 0 2%;
-     margin: 15px 0;
-     display: inline-block;
-     vertical-align: top;
-     border-left: 1px solid #e7e7eb;
+    font-size: 14px;
+    width: auto;
+    box-sizing: border-box;
+    padding: 0 2%;
+    margin: 15px 0;
+    display: inline-block;
+    vertical-align: top;
+    border-left: 1px solid #e7e7eb;
   }
   .data-item:first-child{
-        border-left-width: 0;
+    border-left-width: 0;
   }
   .data-title {
-      color: #9a9a9a;
-      font-weight: 400;
-      border-left: 1px solid #e7e7eb;
-      border-left-width: 0;
-      font-size: 1.3rem;
+    color: #9a9a9a;
+    font-weight: 400;
+    border-left: 1px solid #e7e7eb;
+    border-left-width: 0;
+    font-size: 1.3rem;
   }
   .chart-wrapper {
     width: 100%;
@@ -464,5 +454,21 @@
   }
   .labelTitle {
     line-height: 36px;
+  }
+  .chartDiv {
+    position: relative;
+  }
+  .mask {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    z-index: 99;
+    justify-content: center;
+    align-items: center;
+    color: #999;
   }
 </style>

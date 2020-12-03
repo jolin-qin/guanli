@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import * as shuxinTool from '@/utils/shuxin-tool'
 
 // 查询字典类型列表
 export function listType(query) {
@@ -57,15 +58,21 @@ export function updateType(data) {
 }
 
 // 删除字典类型
-export function delType(dictId) {
+export function delType(id) {
+  if (shuxinTool.isEmpty(id)){
+      return;
+  }
+  var ids = [];
+  var splitIds = (id + '').split(',');
+  for (var i=0; i<splitIds.length; i++){
+    ids.push({dict_id: splitIds[i]});
+  }
   return request({
     url: '/system/dict/type/remove',
     method: 'post',
     data: JSON.stringify({
       tableName: "sys_dict_type",
-      ids: [{
-        "dict_id": dictId
-      }]
+      ids: ids
     })
   })
 }

@@ -32,7 +32,7 @@ export function createOssClient(value) {
 
 
 /**
- * 创建oss客户端对象
+ * 上传文件
  */
 export function upload(option) {
   let file = option.file
@@ -63,7 +63,7 @@ export function upload(option) {
           option.onProgress(e)
         }
       }).then((val) => {
-        console.log('分片上传文件 响应：', val)
+        console.log('分片上传文件响应：', val)
         if (val.res.statusCode === 200) {
           let urls= [];
           let uploadFileUrl = null;
@@ -75,11 +75,11 @@ export function upload(option) {
             urls.push(that.ossDomainName + newUrlPath.substring(newUrlPath.indexOf("/gameDevopsImgs")))
           }
           option.onSuccess(urls)
-          return val
+          // return val
         } else {
           option.onError('上传失败')
         }
-      }, err => {
+      }).catch((err) => {
         option.onError('上传失败')
         reject(err)
       })

@@ -54,6 +54,20 @@ export function updateProduct(data) {
     })
 }
 
+
+// 修改产品
+export function updateAttributeProduct(data) {
+    return request({
+        url: '/business/product/updateAttributeProduct',
+        method: 'post',
+        data:JSON.stringify({
+            tableName:"matrix_product",
+            data:data
+        })
+    })
+}
+
+
 //删除产品
 export function delProduct(id) {
     return request({

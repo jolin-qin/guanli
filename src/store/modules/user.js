@@ -45,7 +45,11 @@ const user = {
         })
       })
     },
-
+    Getnihao() {
+      setTimeout(() => {
+        console.log("你好")
+      })
+    },
     // 获取用户信息
     GetInfo({ commit, state }) {
       return new Promise((resolve, reject) => {
@@ -66,7 +70,7 @@ const user = {
         })
       })
     },
-    
+
     // 退出系统
     LogOut({ commit, state }) {
       return new Promise((resolve, reject) => {

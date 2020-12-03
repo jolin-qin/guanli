@@ -79,80 +79,71 @@
 import * as qpShop from '@/api/global-cache'
 import { downLoadZip } from "@/utils/zipdownload";
 import request from '@/utils/request'
-import * as qpTool from '@/utils/shuxin-tool.js'
-
+import * as qpTool from '@/utils/shuxin-tool'
+import { setDefaultTime } from '@/api/shuxin'
 export default {
   name: "materialReport",
   data() {
     return {
       advertList:[],
       groupList:[],
-      // 遮罩层
-      loading: true,
-      // 选中数组
-      ids: [],
-      // 非单个禁用
-      single: true,
-      // 非多个禁用
-      multiple: true,
-      // 总条数
-      total: 0,
-      // 素材监控
-      shareReportList: [],
+      loading: true,// 遮罩层
+      ids: [],// 选中数组
+      single: true,// 非单个禁用
+      multiple: true,// 非多个禁用
+      total: 0,// 总条数
+      shareReportList: [],// 素材监控
+      defaultPlatformType: '',// 乘放游戏平台默认值
       dateRange:[],
       queryParams:{
         platformType: '',
         gameGroup: [],
         productId: []
       },
-      // 弹出层标题
-      title: "",
-      // 是否显示弹出层
-      open: false,
       dictCache: qpShop.globalCache.shopCache.dictCache
     };
   },
   created() {
-    this.getList();
-    this.advertInputSelect();
-    this.groupInputSelect();
+    this.groupInputSelect()
+    this.dateRange = setDefaultTime() //设置默认时间(7天)
+    this._defaultPlatform() //设置默认平台，会触发paramsChange()函数
   },
   methods: {
     /** 查询角色列表 */
     getList() {
       this.loading = true;
-      this.shareList().then(
-        response => {
-          this.shareReportList = response.data;
-          this.loading = false;
-        }
-      );
-    },
-    shareList(){
-      return request({
+      request({
         url: '/reportGameQuery/queryShareData',
         method: 'post',
         data:JSON.stringify(this.getQueryData())
-      })
+      }).then(
+        response => {
+          if(!response.data) {
+            this.shareReportList = []
+          } else {
+            this.shareReportList = response.data
+          }
+          this.loading = false;
+        }
+      )
     },
     /** 搜索按钮操作 */
     handleQuery() {
-      this.getList();
-      this.advertInputSelect();
-      this.groupInputSelect();
+      // 没选产品不能请求
+      if(this.queryParams.productId.length > 0) {
+        this.getList()
+      } else {
+        this.$message.error('游戏产品是必选的参数哦~');
+      }
     },
     /** 重置按钮操作 */
     resetQuery() {
-      this.dateRange = [];
-
-      this.queryParams = {
-          platformType:undefined,
-          gameGroup:undefined,
-          productId:undefined
-      }
-
+      this.dateRange = setDefaultTime()
+      this.queryParams.platformType = this.defaultPlatformType
+      this.queryParams.gameGroup = []
+      //此处为什么不修改productId的值，是因为设置了平台，会联动到产品
       this.resetForm("queryForm");
-      this.handleQuery();
+      this.asyncCall()
     },
     getQueryData(){
       return {
@@ -163,102 +154,72 @@ export default {
         "platformType": this.queryParams["platformType"],
       }
     },
-    /**  导出类目监控  */
-    exportShare(){
-        var filterJsonStr = JSON.stringify(this.getQueryData());
-        downLoadZip(encodeURI("/reportGameExport/gameExportShareData?filterJson=" + filterJsonStr), "exportShare",true);
-    },
 
-    // 商场下拉数据
-    // advertInputSelect(query) {
-    //  var that = this;
-    //  this.inputSelectList("t_filter", "product_id", query, function(data) {
-    //    that.advertList = data;
-    //  });
-    // },
-    advertInputSelect(query, params) {
+    //平台、分组change事件
+    paramsChange(){
+      return new Promise((resolve, reject) => {
+        let groupByIds = this.queryParams["gameGroup"]; //是个数组
+        let platformType = this.queryParams["platformType"];
+        let groupByIdsStr = "";
+        if(groupByIds.length > 0) {
+          for(let i = 0;i < groupByIds.length;i++) {
+            groupByIdsStr += "'" + groupByIds[i] +"',";
+          }
+          groupByIdsStr = groupByIdsStr.substring(0,groupByIdsStr.length - 1);
+        }
+        let params = {
+          platformType: qpTool.isEmpty(platformType) ? '' : platformType,
+          groupByIds: groupByIdsStr
+        };
+        this.advertInputSelect(null, params, resolve);
+      })
+    },
+    advertInputSelect(query, params, resolve) {
+      this.advertList = [] //options需要清空
+      this.queryParams.productId = [] //产品显示也需要清空
       var that = this;
-      if(undefined == params) {
+      if(params == undefined) {
         params = {
           platformType: '',
           groupByIds: ''
         }
       }
-      // 此方法在main.js引进
       this.inputSelectList("t_filter", "product_id", query, function(data) {
-        that.advertList = data;
+        if(data.length > 0) {
+          that.advertList = data
+          that.queryParams.productId.push(data[0].targetIdColumnInputSelect)
+        } else {
+          // that.advertList = []
+          that.queryParams.productId = []
+        }
+        resolve && resolve()
       }, JSON.stringify(params));
+    },
+    // 异步函数同步话执行
+    async asyncCall() {
+      await this.paramsChange() //等此函数执行完再执行getList()
+      this.getList()
+    },
+    // 设置默认平台函数
+    _defaultPlatform() {
+      let arr = this.dictCache.platform_type.details
+      let value = arr[0].dictValue
+      this.queryParams.platformType = value
+      this.defaultPlatformType = value
+      this.asyncCall()
     },
     // 商场下拉数据
     groupInputSelect(query) {
       var that = this;
       this.inputSelectList("t_filter", "group_id", query, function(data) {
         that.groupList = data;
-      });
+      })
     },
-
- // 商场下拉数据
-   advertInputSelect(query) {
-     var that = this;
-     this.inputSelectList("t_filter", "product_id", query, function(data) {
-       that.advertList = data;
-     });
-   },
-
-
- //平台、分组change事件
-     paramsChange(){
-        let groupByIds = this.queryParams["gameGroup"];
-        let platformType = this.queryParams["platformType"];
-        let groupByIdsStr = "";
-        for(let i = 0;i < groupByIds.length;i++){
-          groupByIdsStr += "'" + groupByIds[i] +"',";
-        }
-        if(groupByIdsStr.length > 0){
-          groupByIdsStr = groupByIdsStr.substring(0,groupByIdsStr.length - 1);
-        }
-        let params = {
-             platformType:qpTool.isEmpty(platformType)?'':platformType,
-             groupByIds: groupByIdsStr
-        };
-        this.advertInputSelect(null,params);
-     },
-
- //产品下拉
-   advertInputSelect(query,params) {
-     var that = this;
-     if(undefined == params){
-        params = {
-          platformType:'',
-          groupByIds:''
-        };
-     }
-     this.inputSelectList("t_filter", "product_id", query, function(data) {
-       that.advertList = data;
-     },JSON.stringify(params));
-   },
-
-
-
-      // 商场下拉数据
-        groupInputSelect(query) {
-          var that = this;
-          this.inputSelectList("t_filter", "group_id", query, function(data) {
-            that.groupList = data;
-          });
-        },
-
-
-
-   // 分组下拉
-        groupInputSelect(query) {
-          var that = this;
-          this.inputSelectList("t_filter", "group_id", query, function(data) {
-            that.groupList = data;
-          });
-        },
-
-
+    /**  导出详细数据  */
+    exportShare(){
+        var filterJsonStr = JSON.stringify(this.getQueryData());
+        downLoadZip(encodeURI("/reportGameExport/gameExportShareData?filterJson=" + filterJsonStr), "exportShare",true);
+    }
   }
 };
 </script>

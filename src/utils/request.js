@@ -46,7 +46,8 @@ service.interceptors.response.use(res => {
       Notification.error({
         title: res.data.msg
       })
-      return Promise.reject('error:code not 200')
+      //return Promise.reject('error:code not 200')
+       return res.data
     } else {
       return res.data
     }

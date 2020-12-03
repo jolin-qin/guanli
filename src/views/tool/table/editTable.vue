@@ -1,131 +1,75 @@
 <template>
-  <el-card>
+  <el-card v-loading="loading">
     <el-tabs v-model="activeName">
       <el-tab-pane label="基本信息" name="basic">
         <basic-info-form ref="basicInfo" :info="info" />
       </el-tab-pane>
-      <el-tab-pane label="字段信息" name="cloum">
+      <el-tab-pane label="字段信息" name="cloum" >
         <el-table :data="columns" :max-height="tableHeight">
           <el-table-column label="序号" type="index" min-width="5%" />
-          <el-table-column label="字段列名" min-width="15%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.columnName"></el-input>
-            </template>
+          <el-table-column label="字段列名" prop="columnName" min-width="12%">
           </el-table-column>
-          <el-table-column label="字段描述" min-width="15%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.columnComment"></el-input>
-            </template>
+          <el-table-column label="字段别名" prop="columnAlias" min-width="12%">
           </el-table-column>
-          <el-table-column label="字段别名" min-width="15%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.columnAlias"></el-input>
-            </template>
+          <el-table-column label="字段描述" prop="columnComment" min-width="15%">
           </el-table-column>
-          <el-table-column label="数据类型" min-width="11%">
-            <template slot-scope="scope">
-              <el-select v-model="scope.row.dataType">
-                <el-option label="自增" value="AUTO" />
-                <el-option label="整数" value="NUM" />
-                <el-option label="小数" value="FLOAT" />
-                <el-option label="字符串" value="TEXT" />
-                <el-option label="图片" value="IMG" />
-                <el-option label="文件" value="FILE" />
-                <el-option label="密码" value="PWD" />
-                <el-option label="是非" value="BOOL" />
-                <el-option label="年月日" value="DATE" />
-                <el-option label="时分秒" value="TIME" />
-                <el-option label="完整日期" value="DATE_TIME" />
-                <el-option label="富文本" value="TEXT_AREA" />
-              </el-select>
-            </template>
+          <el-table-column label="数据类型" prop="dataTypeName" min-width="11%">
           </el-table-column>
-          <el-table-column label="最小长度" min-width="5%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.minLength"></el-input>
-            </template>
+          <el-table-column label="最小长度" prop="minLength" min-width="5%">
           </el-table-column>
-          <el-table-column label="最大长度" min-width="7%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.maxLength"></el-input>
-            </template>
+          <el-table-column label="最大长度" prop="maxLength" min-width="7%">
           </el-table-column>
           <el-table-column label="名称字段" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.nameColumn"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.nameColumn"></el-checkbox>
             </template>
           </el-table-column>
           <el-table-column label="主键字段" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.idColumn"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.idColumn"></el-checkbox>
             </template>
           </el-table-column>
           <el-table-column label="新增必填" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.roInsert"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.roInsert"></el-checkbox>
             </template>
           </el-table-column>
           <el-table-column label="更新必填" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.roUpdate"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.roUpdate"></el-checkbox>
             </template>
           </el-table-column>
           <el-table-column label="全文搜索" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.search"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.search"></el-checkbox>
             </template>
           </el-table-column>
-          <el-table-column label="默认值" min-width="10%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.defaultValue"></el-input>
-            </template>
+          <el-table-column label="默认值" prop="defaultValue" min-width="10%">
           </el-table-column>
-          <el-table-column label="数据格式化" min-width="10%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.dataFormat"></el-input>
-            </template>
+          <el-table-column label="数据格式化" prop="dataFormat" min-width="10%">
           </el-table-column>
           <el-table-column label="虚拟字段" min-width="5%">
             <template slot-scope="scope">
-              <el-checkbox true-label="1" v-model="scope.row.virtual"></el-checkbox>
+              <el-checkbox disabled true-label="1" v-model="scope.row.virtual"></el-checkbox>
             </template>
           </el-table-column>
-          <el-table-column label="关联表" min-width="20%">
-            <template slot-scope="scope">
-              <el-select v-model="scope.row.refTable" clearable filterable placeholder="请选择">
-                <el-option
-                  v-for="dict in tablesOptions"
-                  :key="dict.tableName"
-                  :label="dict.tableComment"
-                  :value="dict.tableName">
-                  <span style="float: left">{{ dict.tableComment }}</span>
-                  <span style="float: right; color: #8492a6; font-size: 13px">{{ dict.tableName }}</span>
-                </el-option>
-              </el-select>
-            </template>
+          <el-table-column label="关联表" prop="refTableName" min-width="10%">
           </el-table-column>
-          <el-table-column label="关联过滤条件" min-width="10%">
-            <template slot-scope="scope">
-              <el-input v-model="scope.row.refFilter"></el-input>
-            </template>
+          <el-table-column label="关联过滤条件" prop="refFilter" min-width="10%">
           </el-table-column>
-          <el-table-column label="关联字典" min-width="12%">
-            <template slot-scope="scope">
-              <el-select v-model="scope.row.refDict" clearable filterable placeholder="请选择">
-                <el-option
-                  v-for="dict in dictOptions"
-                  :key="dict.dictType"
-                  :label="dict.dictName"
-                  :value="dict.dictType">
-                  <span style="float: left">{{ dict.dictName }}</span>
-                  <span style="float: right; color: #8492a6; font-size: 13px">{{ dict.dictType }}</span>
-              </el-option>
-              </el-select>
-            </template>
+          <el-table-column label="关联字典" prop="refDictName" min-width="12%">
           </el-table-column>
-          <el-table-column label="关联SQL" min-width="10%">
+          <el-table-column label="关联SQL" prop="refSql" min-width="10%">
+          </el-table-column>
+          <el-table-column label="操作" align="center" width="80">
             <template slot-scope="scope">
-              <el-input v-model="scope.row.refSql"></el-input>
+              <el-button
+                type="text"
+                size="small"
+                icon="el-icon-delete"
+                @click="handleColumnDelete(scope.$index, scope.row)"
+                v-hasPermi="['tool:gen:remove']"
+              >删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -133,61 +77,144 @@
     </el-tabs>
     <el-form label-width="100px">
       <el-form-item style="text-align: center;margin-left:-100px;margin-top:10px;">
-        <el-button @click="addColumn()">添加字段</el-button>
+        <el-button icon="el-icon-plus" @click="openAddColumn()">添加字段</el-button>
         <el-button type="primary" @click="submitForm()">提交</el-button>
         <el-button @click="close()">返回</el-button>
       </el-form-item>
     </el-form>
+    <add-column ref="columnDialog" @ok="handleAddColumn"></add-column>
   </el-card>
 </template>
 <script>
-import { getSysTable,tableOptionSelect, updateSysTable } from "@/api/tool/table";
+import { createTable,getSysTable,listSysTable, createOrEditSysTable,delSysTableColumn,addSysTableColumn  } from "@/api/tool/table";
 import { optionselect as getDictOptionselect } from "@/api/system/dict/type";
 import basicInfoForm from "./basicInfoForm";
+import addColumn from "./addColumn";
+
+
+
 export default {
   name: "SysEdit",
   components: {
-    basicInfoForm
+    basicInfoForm,
+    addColumn
   },
   data() {
     return {
       // 选中选项卡的 name
       activeName: "basic",
+      //进度条
+      loading:false,
+      //表id
+      tableId:'',
       // 表格的高度
       tableHeight: document.documentElement.scrollHeight - 245 + "px",
       // 表列信息
       columns: [],
-      // 字典信息
-      dictOptions: [],
-      //所有表
-      tablesOptions: [],
+      //数据字典map
+      dictMap:{},
+      dataTypeMap:{
+        "AUTO":"自增主键",
+        "NUM":"整数",
+        "FLOAT":"小数",
+        "TEXT":"文本",
+        "IMG":"图片",
+        "FILE":"文件",
+        "PWD":"密码",
+        "BOOL":"是非",
+        "DATE":"日期",
+        "TIME":"时间",
+        "DATE_TIME":"日期时间",
+        "TEXT_AREA":"富文本"
+      },
+      //所有表名称map
+      tableMap:{},
       // 表详细信息
-      info: {}
+      info: {},
+      //操作类型
+      type:'add'
     };
   },
-  beforeCreate() {
+  created() {
     const { tableId } = this.$route.query;
-    if (tableId) {
-      // 获取表详细信息
-      getSysTable(tableId).then(res => {
-        this.columns = res.data.columns;
-        this.info = res.data;
-      });
-      /** 查询表下拉列表 */
-      tableOptionSelect().then(response => {
-        this.tablesOptions = response.data;
-      });
-      /** 查询字典下拉列表 */
-      getDictOptionselect().then(response => {
-        this.dictOptions = response.data;
-      });
+    this.tableId=tableId;
+    if(this.tableId){
+      this.reset();
+      this.type='edit'
+      this.loadData();
+    }else{
+      this.type='add'
     }
   },
   methods: {
+    //删除字段
+    handleColumnDelete(index, row){
+      this.columns.splice(index,1)
+     /* this.loading=true;
+      delSysTableColumn(row.columnId).then(res=>{
+        this.loading=false;
+        this.columns.splice(index, 1);
+      }).catch(err=>{
+         this.loading=false;
+      }) */
+    },
+    /**
+     * 查询字典下拉列表
+     * 获取所有表
+     * 获取表详细信息
+     *
+     */
+    loadData(){
+      Promise.all([getDictOptionselect(),listSysTable(), getSysTable(this.tableId)]).then(res=>{
+        console.log("Promise res=",res)
+        //字典map
+        var dictList=res[0].data
+        for(var i in dictList){
+          this.dictMap[dictList[i].dictType]=dictList[i].dictName
+        }
+
+        //获取所有表
+        var tableList=res[1].rows
+        for(var i in tableList){
+          this.tableMap[tableList[i].tableName]=tableList[i].tableComment
+        }
+
+        //表详细信息
+        var tableDetail=res[2].data
+        for(var i in tableDetail.columns){
+          this.fillColumnData(tableDetail.columns[i])
+        }
+        this.columns = tableDetail.columns;
+        this.info = tableDetail;
+        this.loading=false;
+        console.log("表信息：",this.info,"字段列表：",this.columns)
+      });
+    },
+    //补全字段显示用的参数
+    fillColumnData(column){
+      column.refDictName=this.dictMap[column.refDict]
+      column.dataTypeName=this.dataTypeMap[column.dataType]
+      column.refTableName=this.tableMap[column.refTable]
+    },
+    //添加字段的回调方法
+    handleAddColumn(value){
+      this.fillColumnData(value)
+      value.tableId=this.tableId
+      console.log("处理新添加的字段：",value)
+      this.columns.push(value)
+
+
+      // this.loading=true;
+      /* addSysTableColumn(value).then(res=>{
+        this.loadData()
+      }).catch(err=>{
+         this.loading=false;
+      }) */
+    },
     /** 添加字段 */
-    addColumn() {
+    openAddColumn() {
       this.activeName="cloum";
-      this.columns.push({tableId:this.info.tableId,tableName:this.info.tableName});
+      this.$refs.columnDialog.show()
     },
     /** 提交按钮 */
     submitForm() {
@@ -202,12 +229,16 @@ export default {
             treeName: genTable.treeName,
             treeParentCode: genTable.treeParentCode
           };
-          updateSysTable(genTable).then(res => {
-            this.msgSuccess(res.msg);
-            if (res.code === 200) {
-              this.close();
-            }
-          });
+
+          console.log('表信息：',genTable)
+
+         createOrEditSysTable(genTable).then(res => {
+           this.msgSuccess(res.msg);
+           if (res.code === 200) {
+             this.close();
+           }
+         });
+
         } else {
           this.msgError("表单校验未通过，请重新检查提交内容");
         }
@@ -224,6 +255,11 @@ export default {
     close() {
       this.$store.dispatch("tagsView/delView", this.$route);
       this.$router.push({ path: "/tool/table", query: { t: Date.now()}})
+    },
+    //重置
+    reset(){
+      this.columns=[];
+      this.info={};
     }
   }
 };

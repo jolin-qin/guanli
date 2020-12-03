@@ -40,15 +40,6 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button
-          type="success"
-          icon="el-icon-edit"
-          size="mini"
-          @click="handleDesignTable"
-          v-hasPermi="['tool:gen:design']"
-        >设计表</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
           type="primary"
           icon="el-icon-download"
           size="mini"
@@ -79,13 +70,13 @@
 
     <el-table v-loading="loading" :data="tableList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55"></el-table-column>
-      <el-table-column label="序号" align="center" prop="tableId" width="50px" />
+      <el-table-column label="序号" align="center" prop="tableId" width="66" />
       <el-table-column
         label="表名称"
         align="center"
         prop="tableName"
         :show-overflow-tooltip="true"
-        width="130"
+        width="200"
       />
       <el-table-column
         label="表描述"

@@ -1,6 +1,14 @@
 import request from '@/utils/request'
 
 
+ // 创建db表
+ export function createTable(data) {
+   return request({
+     url: '/tool/systable/create',
+     method: 'post',
+     data: data
+   })
+ }
 
 // 查询表下拉列表
 export function tableOptionSelect() {
@@ -27,7 +35,17 @@ export function getSysTable(tableId) {
   })
 }
 
-// 修改代码生成信息
+
+// 创建或修改表信息
+export function createOrEditSysTable(data) {
+  return request({
+    url: '/tool/systable/table/createOrEdit',
+    method: 'post',
+    data: data
+  })
+}
+
+// 修改表信息
 export function updateSysTable(data) {
   return request({
     url: '/tool/systable/table/edit',
@@ -38,9 +56,57 @@ export function updateSysTable(data) {
 
 
 // 删除表数据
-export function delSysTable(tableId) {
+export function delSysTable(tableIds) {
   return request({
-    url: '/tool/gen/' + tableId,
-    method: 'delete'
+    url: '/tool/systable/remove/' + tableIds,
+    method: 'post'
+  })
+}
+
+
+// 查询字段列表
+export function listSysTableColumn(data) {
+  return request({
+    url: '/tool/systable/column/list',
+    method: 'post',
+    data: data
+  })
+}
+
+// 删除字段数据
+export function delSysTableColumn(columnId) {
+  return request({
+    url: '/tool/systable/column/remove/' + columnId,
+    method: 'post'
+  })
+}
+
+
+// 新增字段
+export function addSysTableColumn(data) {
+  return request({
+    url: '/tool/systable/column/add',
+    method: 'post',
+    data: data
+  })
+}
+
+
+// 新增校验规则
+export function addCheckTable(data) {
+  return request({
+    url: '/tool/systable/check/add',
+    method: 'post',
+    data: data
+  })
+}
+
+
+// 查询校验规则列表
+export function listCheckTable(data) {
+  return request({
+    url: '/tool/systable/check/list',
+    method: 'post',
+    data: data
   })
 }

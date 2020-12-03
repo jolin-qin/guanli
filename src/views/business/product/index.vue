@@ -48,9 +48,28 @@
           <div v-html="scope.row.isCheck"></div>
         </template>
       </el-table-column>
+      <el-table-column label="审核状态_A" align="center" prop="isCheckA">
+        <template slot-scope="scope">
+          <div v-html="scope.row.isCheckA"></div>
+        </template>
+      </el-table-column>
+      <el-table-column label="包名" align="center" prop="pkgName" />
+      <el-table-column label="app秘钥" align="center" prop="appKey" />
+       <el-form-item label="版本" prop="version">
+        <el-input
+          v-model="queryParams.version"
+          placeholder="请输入版本"
+          clearable
+          size="small"
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-table-column label="版本" align="center" prop="version" />
+      <el-table-column label="备注信息" align="center" prop="remark" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button size="mini" type="text" icon="el-icon-edit" @click="handleUpdate(scope.row)" v-hasPermi="['business:product:edit']">修改</el-button>
+          <el-button size="mini" type="text" icon="el-icon-edit" @click="attributeUpdate(scope.row)" v-hasPermi="['business:product:edit']">属性</el-button>
           <el-button size="mini" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)" v-hasPermi="['business:product:remove']">删除</el-button>
         </template>
       </el-table-column>
@@ -94,8 +113,23 @@
             <el-option v-for="item in dictCache.is_check.details" :key="item.dictValue" :label="item.dictLabel" :value="item.dictValue" />
           </el-select>
         </el-form-item>
-
-
+        <el-form-item label="审核状态_A" prop="isCheckA">
+          <el-select v-model="form.isCheckA" placeholder="审核状态">
+            <el-option v-for="item in dictCache.is_check.details" :key="item.dictValue" :label="item.dictLabel" :value="item.dictValue" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注信息" prop="remark">
+          <el-input v-model="form.remark" placeholder="请输入审核备注" />
+        </el-form-item>
+        <el-form-item label="包名" prop="pkgName">
+          <el-input v-model="form.pkgName" placeholder="请输入包名" />
+        </el-form-item>
+        <el-form-item label="app秘钥" prop="appKey">
+          <el-input v-model="form.appKey" placeholder="app秘钥" />
+        </el-form-item>
+         <el-form-item label="版本" prop="version">
+            <el-input v-model="form.version" placeholder="请输入版本" />
+        </el-form-item>
         <el-table :data="form.inGopdList">
           <el-table-column label="广告名称" align="center" prop="advertId">
             <template slot-scope="scope">
@@ -138,6 +172,52 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
+
+
+
+
+    <!-- 添加或修改产品对话框 -->
+    <el-dialog :title="attributeTitle" :visible.sync="attributeOpen" width="1200px">
+      <el-form ref="attributeForm" :inline="true"    :model="attributeForm" :rules="attributeRules" label-width="120px">
+        <el-table :data="attributeForm.attributeList"
+                  row-key="id"
+                  default-expand-all
+                  :tree-props="{children: 'children'}">
+          <el-table-column label="属性key" align="center" prop="attributeList.attributeKey">
+            <template slot-scope="scope">
+              <el-input type="text" placeholder="请输入属性key" v-model="scope.row.attributeKey"  @input="attributeChange()"></el-input>
+            </template>
+          </el-table-column>
+          <el-table-column label="属性value" align="center" prop="attributeValue">
+            <template slot-scope="scope">
+              <el-input type="text" placeholder="请输入属性值" v-model="scope.row.attributeValue"  @input="attributeChange()"></el-input>
+            </template>
+          </el-table-column>
+          <el-table-column label="属性说明" align="center" prop="attributeName">
+            <template slot-scope="scope">
+              <el-input type="text" placeholder="请输入属性说明" v-model="scope.row.attributeName"  @input="attributeChange()"></el-input>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+            <template   slot-scope="scope">
+              <el-button  v-if="scope.row.show" size="mini" type="text" icon="el-icon-add" @click="addAttributeChildren(scope.row)">添加子项</el-button>
+              <el-button  v-else="scope.row.show" size="mini" type="text" icon="el-icon-add">&emsp;&emsp;&emsp;&emsp;</el-button>
+              <el-button  v-if="scope.row.show"  size="mini" type="text" icon="el-icon-delete" @click="deleteAttribute(scope.row)">删除</el-button>
+              <el-button  v-else="scope.row.show" size="mini" type="text" icon="el-icon-delete" @click="deleteAttributeChildren(scope.row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="right-float-top pt30">
+          <el-button type="primary" icon="el-icon-plus" circle @click="addAttribute"></el-button>
+        </div>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+         <el-button type="primary" @click="submitAttributeForm">确 定</el-button>
+        <el-button @click="cancelAttribute">取 消</el-button>
+      </div>
+    </el-dialog>
+
+
   </div>
 </template>
 
@@ -148,10 +228,14 @@
     delProduct,
     addProduct,
     updateProduct,
+    updateAttributeProduct,
     exportProduct
   } from "@/api/business/matrix_product";
   import * as qpShop from '@/api/global-cache'
   import * as shuxinTool from '@/utils/shuxin-tool'
+
+
+
   export default {
     name: "Product",
     data() {
@@ -191,8 +275,12 @@
         productList: [],
         // 弹出层标题
         title: "",
+        attributeTitle:"",
+
         // 是否显示弹出层
         open: false,
+        // 是否显示属性弹出层
+        attributeOpen:false,
         // 查询参数
         queryParams: {
           pageNum: 1,
@@ -206,6 +294,9 @@
         },
         // 表单参数
         form: {},
+
+        attributeForm:{},
+
         // 表单校验
         rules: {
 
@@ -239,8 +330,29 @@
             message: "审核状态",
             trigger: "change"
           }],
-
+          isCheckA: [{
+            required: true,
+            message: "审核状态",
+            trigger: "change"
+          }],
         },
+
+
+        // 表单校验
+        attributeRules: {
+
+          attributeName: [{
+            required: true,
+            message: "属性名不能为空",
+            trigger: "blur"
+          }],
+          attributeKey: [{
+            required: true,
+            message: "属性key不能为空",
+            trigger: "blur"
+          }],
+        },
+
         dictCache: qpShop.globalCache.shopCache.dictCache,
       };
     },
@@ -295,6 +407,9 @@
         this.open = false;
         this.reset();
       },
+
+
+
       // 表单重置
       reset() {
         this.form = {
@@ -314,6 +429,47 @@
         };
         this.resetForm("form");
       },
+
+   // 表单重置
+      reset() {
+        this.form = {
+          id: undefined,
+          remark: undefined,
+          appId: undefined,
+          isDel: 0,
+          gameName: undefined,
+          styleAssembly: undefined,
+          guideLevel: undefined,
+          createBy: undefined,
+          createTime: undefined,
+          updateBy: undefined,
+          updateTime: undefined,
+          platformType: undefined,
+          inGopdList: [],
+        };
+        this.resetForm("form");
+      },
+
+
+
+      // 取消按钮
+      cancelAttribute() {
+        this.attributeOpen = false;
+        this.attributeReset();
+      },
+
+
+
+      // 表单重置
+      attributeReset() {
+        this.attributeForm = {
+          id:undefined,
+          attributeList: []
+        };
+        this.resetForm("attributeForm");
+      },
+
+
       /** 搜索按钮操作 */
       handleQuery() {
         this.queryParams.pageNum = 1;
@@ -353,6 +509,10 @@
 
         var isCheck = this.dictCache.is_check.details;
         this.form.isCheck = isCheck[0].dictValue;
+
+        var isCheckA = this.dictCache.is_check.details;
+        this.form.isCheckA = isCheckA[0].dictValue;
+
         this.advertInputSelect(this.form.platformType);
       },
       /** 修改按钮操作 */
@@ -375,7 +535,28 @@
           this.title = "修改产品";
         });
       },
-      /** 提交按钮 */
+
+
+      /** 修改按钮操作 */
+      attributeUpdate(row) {
+        this.isSubmit = false;
+        this.attributeReset();
+        const id = row.id ;
+        getProduct(id).then(response => {
+          var obj={
+            id:row.id,
+            attributeList:response.data.attributeList
+          }
+          this.attributeForm = obj;
+          console.log("this.attributeForm",this.attributeForm);
+          this.attributeOpen = true;
+          this.attributetitle = "修改产品";
+        });
+      },
+
+
+
+   /** 提交按钮 */
       submitForm: function() {
         this.$refs["form"].validate(valid => {
           if (valid) {
@@ -407,6 +588,31 @@
                 }
               });
             }
+          }
+        });
+      },
+
+
+      /** 提交按钮 */
+      submitAttributeForm: function() {
+        this.$refs["attributeForm"].validate(valid => {
+          if (valid) {
+            if (this.isSubmit) {
+              return;
+            }
+            this.isSubmit = true;
+
+            console.log("this.attributeForm",this.attributeForm);
+
+            updateAttributeProduct(this.attributeForm).then(response => {
+              if (response.code === 200) {
+                this.msgSuccess("修改成功");
+                this.attributeOpen = false;
+              } else {
+                this.isSubmit = false;
+                this.msgError(response.msg);
+              }
+            });
           }
         });
       },
@@ -451,6 +657,91 @@
         }
         this.form.inGopdList.push(obj)
       },
+
+
+      // 添加商品
+      addAttribute() {
+        var obj = {
+          id: shuxinTool.uuid(),
+          attributeName: '',
+          attributeKey: '',
+          attributeValue: '',
+          show:true
+        }
+        if(this.attributeForm.attributeList==null){
+          this.attributeForm.attributeList=[];
+        }
+        this.attributeForm.attributeList.push(obj)
+      },
+
+
+      attributeChange(){
+        console.log("改变了数据");
+        this.addAttribute();
+        this.attributeForm.attributeList.pop();
+      },
+
+
+      // 添加商品
+      addAttributeChildren(row) {
+        var obj = {
+          id: shuxinTool.uuid(),
+          attributeName: '',
+          attributeKey: '',
+          attributeValue: '',
+          fid:row.id,
+          show:false
+        }
+        if(row.children==null){
+          row.children=[];
+        }
+        row.children.push(obj);
+        for (var i = 0; i < this.attributeForm.attributeList.length; i++) {
+          if (row.id == this.attributeForm.attributeList[i].id) {
+            this.attributeForm.attributeList[i]=row;
+          }
+        }
+        this.attributeChange();
+      },
+
+
+
+      // 删除单个商品
+      deleteAttribute(row) {
+        if (shuxinTool.isEmpty(this.attributeForm.attributeList)) {
+          return;
+        }
+        for (var i = 0; i < this.attributeForm.attributeList.length; i++) {
+          if (row.id == this.attributeForm.attributeList[i].id) {
+            this.attributeForm.attributeList.splice(i, 1);
+            return;
+          }
+        }
+      },
+
+
+
+      // 删除单个商品
+      deleteAttributeChildren(row) {
+        console.log("row",row);
+        for (var i = 0; i < this.attributeForm.attributeList.length; i++) {
+          if (row.fid == this.attributeForm.attributeList[i].id) {
+            var childrenList=this.attributeForm.attributeList[i].children;
+            for (var j = 0; j < childrenList.length; j++) {
+              if (row.id == childrenList[j].id) {
+                childrenList.splice(j, 1);
+                this.attributeForm.attributeList[i].children=childrenList;
+                break;
+              }
+            }
+            break;
+          }
+        }
+        this.addAttribute();
+        this.attributeForm.attributeList.pop();
+      },
+
+
       // 删除单个商品
       deleteGoodsBtn(row) {
         if (shuxinTool.isEmpty(this.form.inGopdList)) {
@@ -477,3 +768,14 @@
     }
   };
 </script>
+<style>
+  .el-input{
+    width: 80%;
+  }
+
+  .el-table__expand-icon{
+    float:left;
+    margin-top: 10px;
+  }
+
+</style>

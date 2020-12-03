@@ -2,6 +2,7 @@ import * as shuxinTool from '@/utils/shuxin-tool'
 import request from '@/utils/request'
 import * as globalCache from '@/api/global-cache'
 
+
 // 重载后端缓存
 export function reloadJsCache(){
   console.log('重载后端缓存');
@@ -249,12 +250,12 @@ export function buildFilter(tableName, query){
   var columnMap = table.columnMap;
   var hasColumnFlag = false;
   var column;
-  for (var key in query){
+  for(var key in query) {
     hasColumnFlag = false;
-    if (shuxinTool.isEmpty(query[key])){
+    if (shuxinTool.isEmpty(query[key])) {
       continue;
     }
-    for (var columnKey in columnMap){
+    for(var columnKey in columnMap) {
       if (columnMap[columnKey].columnAlias == key){
         hasColumnFlag = true;
         column = columnMap[columnKey];
@@ -264,23 +265,23 @@ export function buildFilter(tableName, query){
     if (!hasColumnFlag){
       continue;
     }
-
-
     //范围字段
     if (query[key] instanceof Array){
       if (column.dataType == "DATE_TIME" || column.dataType == "DATE"){
-              filter[key] = {};
-              filter[key].type = 'between';
-              filter[key].from = query[key][0];
-              if (!shuxinTool.isEmpty(query[key][1])){
-                filter[key].to = query[key][1];
-              }
-            }else{
-              filter[key] = {};
-              filter[key].type = 'in';
-              filter[key].value = query[key];
-            }
-    }else{
+        if (!shuxinTool.isEmpty(query[key]) && !shuxinTool.isEmpty(query[key][0])){
+          filter[key] = {};
+          filter[key].type = 'between';
+          filter[key].from = query[key][0];
+          if (!shuxinTool.isEmpty(query[key][1])){
+            filter[key].to = query[key][1];
+          }
+        }
+      } else {
+        filter[key] = {};
+        filter[key].type = 'in';
+        filter[key].value = query[key];
+      }
+    } else {
       filter[key] = {};
       filter[key].value = query[key];
       if (!shuxinTool.isEmpty(column) && column.dataType == 'TEXT' && shuxinTool.isEmpty(column.refTable) && shuxinTool.isEmpty(column.refDict)){ //普通字符串字段为like
@@ -293,8 +294,7 @@ export function buildFilter(tableName, query){
   return filter;
 }
 //下拉框检索
-export function inputSelectList(tableName, columnName, query, callback,params){
-
+export function inputSelectList(tableName, columnName, query, callback, params){
     function getUrl(tableName, columnName, query){
       /* function getParamList(sql) {
           var regexp = /[#\$]\{([^}]+)}/g;
@@ -309,10 +309,9 @@ export function inputSelectList(tableName, columnName, query, callback,params){
           return names;
       } */
       var queryText = '';
-      if (typeof query == 'string'){
+      if(typeof query == 'string') {
         queryText = query;
       }
-
       var refFilter = column.refFilter;
       if (shuxinTool.isEmpty(refFilter)){
           return '/input/select/filter?param=' + '' + '&tableName=' + encodeURI(tableName) + '&columnName=' + encodeURI(columnName) + '&wd=' + queryText;
@@ -327,9 +326,9 @@ export function inputSelectList(tableName, columnName, query, callback,params){
               filterParam[sqlParamColumn.columnName] = value;
           }
       } */
-		if (shuxinTool.isEmpty(params)){
-			params = '';
-		}
+      if (shuxinTool.isEmpty(params)){
+        params = '';
+      }
       return '/input/select/filter?param=' + encodeURI(params) + '&tableName=' + encodeURI(tableName) +
           '&columnName=' + encodeURI(columnName) + '&wd=' + queryText;
     }
@@ -337,7 +336,7 @@ export function inputSelectList(tableName, columnName, query, callback,params){
       if (shuxinTool.isEmpty(data)){
         return [];
       }
-      //取关联表表的id与名称列封装到数据中. 页面直接显示
+      //取关联表的id与名称列封装到数据中. 页面直接显示
       var targetColumn, idColumn;   //显示的值与保存的值
       var refTableName = column.refTable;
       if (shuxinTool.isEmpty(refTableName)){
@@ -358,15 +357,17 @@ export function inputSelectList(tableName, columnName, query, callback,params){
       }
       return data;
     }
+
+
     var table = globalCache.globalCache.shopCache.tableCache[tableName];
-    console.log('inputselecttable:', table);
+    // console.log('inputselecttable:', table);
     if (shuxinTool.isEmpty(table)){
         return;
     }
     var column = table.columnMap[columnName];
     if (shuxinTool.isEmpty(column)){
       console.error("column is null!");
-        return;
+      return;
     }
     var url = getUrl(tableName, columnName, query);
     request({url: url, method: 'post'}).then(res=>{
@@ -386,12 +387,28 @@ export function composeNewStr(str) {
   });
   return strArr.join("");
 }
-//时间戳转变为2020-05-20
-export function standardDateFormat(time) {
-  let result = new Date(time)
+// 把毫秒数转换为年-月-日
+function calculateDates(result) {
   let Y = result.getFullYear()
   let M = result.getMonth() + 1 < 10 ? '0' + (result.getMonth() + 1) : result.getMonth() + 1
   let D = result.getDate() < 10 ? '0' + result.getDate() : result.getDate()
   let srtDate = Y + '-' + M + '-' + D
   return srtDate
+}
+//为el-date-picker设置默认时间为昨天
+export function standardDateFormat() {
+  let times = new Date()
+  let yestodayTime = times.setTime(times.getTime() - 3600*1000*24)
+  return calculateDates(new Date(yestodayTime))
+}
+
+//为el-date-picker设置默认时间（7天)
+export function setDefaultTime() {
+  let time = new Date()
+  let endTimeStamp = time.setTime(time.getTime() - 3600*1000*24)
+  let startTimeStamp = time.setTime(time.getTime() - 3600*1000*24*7)
+  let startResult = calculateDates(new Date(startTimeStamp))
+  let endResult = calculateDates(new Date(endTimeStamp))
+  let resultArr = [startResult, endResult]
+  return resultArr
 }

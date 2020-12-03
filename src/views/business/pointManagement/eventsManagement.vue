@@ -3,7 +3,7 @@
     <!-- 顶部select项 -->
     <el-form :model="queryParams" ref="queryForm" :inline="true">
       <el-form-item label="所属平台:">
-        <el-select v-model="queryParams.platformType" placeholder="所属平台">
+        <el-select @change="paramsChange" v-model="queryParams.platformType" placeholder="所属平台">
           <el-option v-for="item in dictCache.platform_type.details" :key="item.dictValue" :label="item.dictLabel"
             :value="item.dictValue" />
         </el-select>
@@ -88,6 +88,7 @@
   import { updateEvent,delEvent } from '@/api/business/basic_event_type_info'
   import * as qpShop from '@/api/global-cache'
   import { downLoadZip } from '@/utils/zipdownload'
+  import * as qpTool from '@/utils/shuxin-tool'
   //import LineChart from '../../dashboard/LineChart.vue' //引进了Echarts封装好的组件
   import request from '@/utils/request'
   export default {
@@ -100,6 +101,7 @@
         loading: true,
         // table列表数据
         eventTableData: [],
+        defaultPlatformType: '',// 乘放游戏平台默认值
         //乘放所属平台/游戏产品及事件名称筛选条件的对象
         queryParams: {
             platformType: '',
@@ -136,10 +138,7 @@
       }
     },
     created() {
-      this.getList();
-      this.advertInputSelect();
-      // this.groupInputSelect();
-      // console.log(this.dictCache);
+      this._defaultPlatform()
     },
     methods: {
       /** 查询事件列表 */
@@ -167,18 +166,14 @@
       /** 搜索按钮操作 */
       handleQuery() {
         this.getList()
-        this.advertInputSelect()
-        // this.groupInputSelect();
       },
       /** 重置按钮操作 */
       resetQuery() {
-        this.queryParams = {
-          platformType: '',
-          productId: '',
-          eventName: ''
-        };
-        this.resetForm("queryForm");
-        this.handleQuery();
+        this.resetForm("queryForm")
+        this.queryParams.eventName = ''
+        this.queryParams.platformType = this.defaultPlatformType
+        //此处为什么不修改productId的值，是因为设置了平台，会联动到产品
+        this.asyncCall()
       },
       reset() {
         this.form = {
@@ -198,13 +193,6 @@
         this.form.id = row.id
         this.isOpen = true
       },
-      // tab中的子项被选中
-      // handleSelectionChange(val) {
-      //   // console.log(val)
-      //   this.ids = val.map(item => item.id)
-      //   this.multiple = !val.length
-      // },
-
       // 弹出框"确认"
       submitForm() {
         this.$refs['form'].validate(vaild => {
@@ -252,8 +240,22 @@
       // handleCurrentChange(val) {
       //   console.log(`当前页: ${val}`);
       // },
+
+      //平台change事件
+      paramsChange() {
+        return new Promise((res, rej) => {
+          let platformType = this.queryParams["platformType"];
+          let params = {
+            platformType: qpTool.isEmpty(platformType) ? '' : platformType,
+            groupByIds: ''
+          };
+          this.advertInputSelect(null, params, res);
+        })
+      },
       // 获取所属平台options
-      advertInputSelect(query, params) {
+      advertInputSelect(query, params, res) {
+        this.advertList = [] //options需要清空
+        this.queryParams.productId = '' //产品显示也需要清空
         var that = this;
         if(params == undefined) {
           params = {
@@ -262,8 +264,25 @@
           }
         }
         this.inputSelectList("t_filter", "product_id", query, function(data) {
-          that.advertList = data;
+          if(data.length > 0) {
+            that.advertList = data
+            that.queryParams.productId = data[0].targetIdColumnInputSelect
+            res && res()
+          }
         }, JSON.stringify(params));
+      },
+      // 设置默认平台
+      _defaultPlatform() {
+        let arr = this.dictCache.platform_type.details
+        let value = arr[0].dictValue
+        this.queryParams.platformType = value
+        this.defaultPlatformType = value
+        this.asyncCall()
+      },
+      // 异步函数同步话执行
+      async asyncCall() {
+        await this.paramsChange() //等此函数执行完再执行getList()
+        this.getList()
       }
     }
   }

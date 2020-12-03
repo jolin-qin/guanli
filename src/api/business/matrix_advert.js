@@ -3,6 +3,14 @@ import * as qpApi from '@/api/shuxin'
 
 // 查询广告列表
 export function listAdvert(query) {
+    let data = qpApi.buildFilter('matrix_advert', query)
+    if (query.dateRange && query.dateRange.length) {
+      data.createTime = {
+        type: 'between',
+        from: query.dateRange[0],
+        to: query.dateRange[1]
+      }
+    }
     return request({
         url: '/business/advert/list',
         method: 'post',
@@ -12,8 +20,9 @@ export function listAdvert(query) {
                 pageSize:query.pageSize,
                 pageNumber:query.pageNum
             },
-            filters:qpApi.buildFilter('matrix_advert', query),
-            orders:[]
+            filters: data,
+            // orders:[]
+            orders:[{column:"createTime",type:"desc"}]
         })
     })
 }
@@ -72,5 +81,18 @@ export function exportAdvert(query) {
         url: '/business/advert/export',
         method: 'get',
         params: query
+    })
+}
+
+
+// 修改产品
+export function updatePricePlan(data) {
+    return request({
+        url: '/business/advert/updatePricePlan',
+        method: 'post',
+        data:JSON.stringify({
+            tableName:"matrix_advert_plan",
+            data:data,
+        })
     })
 }

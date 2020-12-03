@@ -108,6 +108,7 @@
           <el-table-column label="登录名称" align="center" prop="userName" :show-overflow-tooltip="true" />
           <el-table-column label="用户昵称" align="center" prop="nickName" :show-overflow-tooltip="true" />
           <el-table-column label="部门" align="center" prop="deptId" :show-overflow-tooltip="true" />
+          <el-table-column label="角色" align="center" prop="roleId" :show-overflow-tooltip="true" />
           <el-table-column label="手机号码" align="center" prop="phonenumber" width="120" />
           <el-table-column label="状态" align="center">
             <template slot-scope="scope">
@@ -119,7 +120,7 @@
               ></el-switch>
             </template>
           </el-table-column>
-        <!--  <el-table-column label="微信昵称" align="center" prop="wechatUserId" width="120" /> -->
+          <!-- <el-table-column label="微信昵称" align="center" prop="wechatUserId" width="120" /> -->
           <el-table-column label="创建时间" align="center" prop="createTime" width="160">
             <template slot-scope="scope">
               <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -159,8 +160,8 @@
                 type="text"
                 icon="el-icon-key"
                 @click="handleReportUser(scope.row)"
-              >绑定微信</el-button> 
-               <el-button
+              >绑定微信</el-button>
+              <el-button
                 size="mini"
                 type="text"
                 icon="el-icon-key"
@@ -191,7 +192,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="归属部门" prop="deptId">
-              <treeselect v-model="form.deptId" :options="deptOptions" placeholder="请选择归属部门" />
+              <treeselect v-model="form.deptId" :options="deptOptions" placeholder="请选择归属部门"  :default-expand-level="100"/>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -238,7 +239,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="角色">
+            <el-form-item label="角色" prop="roleId">
               <el-select v-model="form.roleId" placeholder="请选择">
                 <el-option
                   v-for="item in roleOptions"
@@ -295,7 +296,7 @@
     </el-dialog>
 
     <!-- 绑定运维人员微信 -->
-    <!-- <el-dialog :title="title" :visible.sync="reportUser" width="700px">
+    <el-dialog :title="title" :visible.sync="reportUser" width="700px">
       <div>
         <el-form ref="form" :model="form" :inline="true" label-width="80px">
           <el-form-item label="微信昵称">
@@ -306,7 +307,7 @@
           </el-form-item>
         </el-form>
         <el-row :gutter="10">
-          <el-col :span="6" class="mb20" v-for="member in members">
+          <el-col :span="6" class="mb20" v-for="member in members" :key="member.id">
             <div class="size140 text-center" :class="member.id==activeMemberId?'border':''" @click="clickBorder(member.id)">
               <el-image :src="member.img"></el-image>
               <p>{{member.nick_name}}</p>
@@ -318,7 +319,7 @@
           <el-button @click="handleReportUserCancel">取 消</el-button>
         </div>
       </div>
-    </el-dialog> -->
+    </el-dialog>
   </div>
 </template>
 
@@ -336,6 +337,7 @@ export default {
   components: { Treeselect },
   data() {
     return {
+      alwaysOpen: true,
       activeIndex:'',
       // 遮罩层
       loading: true,
@@ -417,6 +419,9 @@ export default {
         ],
         deptId: [
           { required: true, message: "归属部门不能为空", trigger: "blur" }
+        ],
+        roleId: [
+          { required: true, message: "角色不能为空", trigger: "blur" }
         ],
         password: [
           { required: true, message: "用户密码不能为空", trigger: "blur" }
@@ -662,20 +667,20 @@ export default {
       this.$refs.upload.submit();
     },
     //运维人员查询
-    // handleReportUserSearch(){
-    //   if ($tool.isEmpty(this.nickName)){
-    //     this.members = [];
-    //     return;
-    //   }
-    //   var url = '/system/user/select?nickname=' + encodeURI(this.nickName);
-    //   var data = {
-    //     url: url,
-    //     method: 'post'
-    //   }
-    //   request(data).then(res=>{
-    //     this.members = res.data;
-    //   });
-    // },
+    handleReportUserSearch(){
+      if ($tool.isEmpty(this.nickName)){
+        this.members = [];
+        return;
+      }
+      var url = '/system/user/select?nickname=' + encodeURI(this.nickName);
+      var data = {
+        url: url,
+        method: 'post'
+      }
+      request(data).then(res=>{
+        this.members = res.data;
+      });
+    },
     // 取消按钮
     handleReportUserCancel() {
       this.reportUser = false;
@@ -684,44 +689,44 @@ export default {
       this.activeMemberId = '';
       this.sysUserId =  '';
     },
-    // // 绑定运维人员提交
-    // handleReportUserSubmit() {
-    //   if ($tool.isEmpty(this.activeMemberId)){
-    //     alert('请选择人员');
-    //     return;
-    //   }
-    //   var url = '/system/user/save';
-    //   var data = {
-    //     url: url,
-    //     method: 'post',
-    //     data: JSON.stringify({sysUserId: this.sysUserId, tUserId: this.activeMemberId})
-    //   }
-    //   request(data).then(res=>{
-    //     this.handleReportUserCancel();
-    //     this.msgSuccess('保存成功');
-    //     this.getList();
-    //   });
-    // },
-    // // 绑定运维人员微信
-    // handleReportUser(row){
-    //   this.sysUserId = row.userId;
-    //   this.activeMemberId = row.wechatUserId;
-    //   this.title = "绑定运维人员";
-    //   this.reportUser = true;
-    // },
-    // //解绑运维人员微信
-    // resetReportUser(row){
-    //   var url = '/system/user/reset';
-    //   var data = {
-    //     url: url,
-    //     method: 'post',
-    //     data: JSON.stringify({sysUserId: row.userId})
-    //   }
-    //   request(data).then(res=>{
-    //     this.msgSuccess('解除成功');
-    //     this.getList();
-    //   });
-    // },
+    // 绑定运维人员提交
+    handleReportUserSubmit() {
+      if ($tool.isEmpty(this.activeMemberId)){
+        alert('请选择人员');
+        return;
+      }
+      var url = '/system/user/save';
+      var data = {
+        url: url,
+        method: 'post',
+        data: JSON.stringify({sysUserId: this.sysUserId, tUserId: this.activeMemberId})
+      }
+      request(data).then(res=>{
+        this.handleReportUserCancel();
+        this.msgSuccess('保存成功');
+        this.getList();
+      });
+    },
+    // 绑定运维人员微信
+    handleReportUser(row){
+      this.sysUserId = row.userId;
+      this.activeMemberId = row.wechatUserId;
+      this.title = "绑定运维人员";
+      this.reportUser = true;
+    },
+    //解绑运维人员微信
+    resetReportUser(row){
+      var url = '/system/user/reset';
+      var data = {
+        url: url,
+        method: 'post',
+        data: JSON.stringify({sysUserId: row.userId})
+      }
+      request(data).then(res=>{
+        this.msgSuccess('解除成功');
+        this.getList();
+      });
+    },
     // 点击头像加边框
     clickBorder(memberId){
       this.activeMemberId = memberId;
